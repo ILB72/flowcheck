@@ -21,13 +21,13 @@ IoT 기기 분류 결과를 받은 보안 입문자가 학습에 없던 트래�
 | `sample_known_devices.csv` | 합성 예시(논문의 실제 분류 결과가 아님): 열 `actual,predicted`, 100행(클래스별 20행), 98행 일치·2행 오분류 → 정확도 98.00%, H1 통과 |
 | `sample_paper_pc.csv` | 논문 PC 사례 697행(BelkinCamera 392 등) → BelkinCamera 56.2%, 쏠림 경고 |
 
-`actual` 열이 있는 파일은 정확도(작업 3)를 자동 계산해 H1(90%) 통과/미달을 보여 주고(쏠림 점검은 학습에 없던 트래픽용이라 건수 점검은 하지 않는다), `predicted`만 있으면 클래스별 건수를 채워 점유율·쏠림을 점검한다. 작업 2에서 "바로 불러오기" 버튼, 파일 선택, 붙여넣기로 집계할 수 있다. 5종 밖의 클래스명은 "알 수 없는 클래스 N건"으로 표시하고, 헤더 없음·빈 파일·5MB 초과는 안내 문구를 보여 준다. 파일은 브라우저 안에서만 처리되며 서버로 전송되지 않는다.
+`actual` 열이 있는 파일은 정확도(작업 3)를 자동 계산해 H1(90%) 통과/미달을 보여 주고(예측 분포 막대는 비교용으로만 보여 주며 쏠림 판정은 하지 않는다. 쏠림 점검은 학습에 없던 트래픽용), `predicted`만 있으면 클래스별 건수를 채워 점유율·쏠림을 점검한다. 작업 2에서 "바로 불러오기" 버튼, 파일 선택, 붙여넣기로 집계할 수 있다. 5종 밖의 클래스명은 "알 수 없는 클래스 N건"으로 표시하고, 헤더 없음·빈 파일·5MB 초과는 안내 문구를 보여 준다. 파일은 브라우저 안에서만 처리되며 서버로 전송되지 않는다.
 
 ## 논문 결과를 앱에서 쓰는 방법
 
 | 기능 | 사용한 논문 수치 |
 |---|---|
-| 1. 예시 불러오기 | 두 장면을 위→아래로 보여 준다. ⓐ 5종 기기 내부 테스트: 정확도 98.19%(12,584/12,816, §4.1)와 표 2의 클래스별 Precision/Recall/F1·Support(SmartThings Recall 0.94가 가장 낮고 126건이 AmazonEcho로 오분류, §4.1). ⓑ 학습에 없던 PC 트래픽 697 Flow 분포: BelkinCamera 392(56.2%), AmazonEcho 186(26.7%), SamsungSmartThings 100(14.3%), NetatmoWeatherStation 18(2.6%), TPLinkSmartPlug 1(0.1%). 56.2%는 FPR이 아니라 논문이 정의한 "강제 분류 비율"이다. |
+| 1. 예시 불러오기 | 두 장면을 위→아래로 보여 준다. ⓐ 5종 기기 내부 테스트(테스트 조건 표기): 정확도 98.19%(12,584/12,816, §4.1), 표 3 열 합계로 계산한 예측 분포 막대(Echo 20.9%, Camera 20.0%, Netatmo 20.0%, SmartThings 19.3%, Plug 19.7%), 표 2 성능표, 접이식 표 3 혼동행렬(SamsungSmartThings→AmazonEcho 126건 강조). 기기 이름은 전체 이름으로 통일. ⓑ 학습에 없던 PC 트래픽 697 Flow 분포: BelkinCamera 392(56.2%), AmazonEcho 186(26.7%), SamsungSmartThings 100(14.3%), NetatmoWeatherStation 18(2.6%), TPLinkSmartPlug 1(0.1%). 56.2%는 FPR이 아니라 논문이 정의한 "강제 분류 비율"이다. |
 | 2. 내 결과 입력 | 논문 H2 기준(각 클래스 20% 내외). 가장 큰 점유율과 20%의 차이(%p)를 계산하고, 모든 클래스가 20%±10%p 안이면 "한쪽 쏠림 없음(H2 기각 조건)", 아니면 "쏠림 있음(H2 채택 조건과 같은 양상)"으로 표시한다. ±10%p는 '내외'를 앱에서 해석한 값이며 논문 수치가 아니다. |
 | 3. 정확도 확인 | 논문 H1 기준(정확도 90% 이상). 참고값 98.19%(12,584/12,816). |
 | 한계 안내(항상 표시) | 단일 PC·약 3분 캡처 / 무작위 분할로 세션 누수 가능 / 특징 기여도 분석 없어 쏠림 원인 단정 불가 / 5종 기기 한정 |
@@ -57,7 +57,7 @@ node test.js
 
 ## 출처와 이용 조건
 
-- 논문: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 (PDF: https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf). 혼동행렬 표는 PDF에만 있고 앱에 옮기지 않았다.
+- 논문: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 (PDF: https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf). 표 2(성능표)와 표 3(혼동행렬)은 논문에서 가져와 화면에 옮겼다(표 3 열 합계로 예측 분포를 계산).
 - 원자료: UNSW-IoTraffic(UNSW Canberra), https://iotanalytics.unsw.edu.au/iottraces.html. 앱에 포함하지 않았다. 이용 조건은 해당 사이트에서 확인한다. 인용: Sivanathan et al. (2018), "Classifying IoT Devices in Smart Environments Using Network Traffic Characteristics", IEEE Transactions on Mobile Computing 18(8), 1745–1759.
 - 모델·집계 설정(Wireshark 캡처, scapy Flow 집계, scikit-learn 랜덤 포레스트): 논문 본문과 논문 재현 스크립트.
 - 예시 CSV 2개: FlowCheck를 위해 합성한 것(`samples/README.md` 참고). 제대로 분류된 예시는 논문의 실제 분류 결과가 아니며, 논문 PC 사례는 표의 건수를 라벨로 풀어 쓴 것. 실제 트래픽·식별자 없음.

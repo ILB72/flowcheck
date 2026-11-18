@@ -29,10 +29,13 @@
     </ol>
     <details class="code-ex">
       <summary>결과 파일 만드는 코드 예시</summary>
-      <pre><code>pip install pandas scikit-learn scapy
-
-import pandas as pd
-# model: 학습된 RandomForestClassifier, X: 특징표
+      <p class="code-h">1) 설치 (터미널)</p>
+      <pre><code>pip install pandas scikit-learn scapy</code></pre>
+      <p class="code-h">2) 분류 결과 저장 (Python)</p>
+      <pre><code>import pandas as pd
+# model: 논문 설정으로 학습한 RandomForestClassifier
+# X: 새 트래픽의 특징표(8개 특징을 원-핫으로 변환한 것)
+# train_columns: 학습 때 만든 특징 컬럼 목록(학습에 쓴 특징표의 컬럼)
 X = X.reindex(columns=train_columns, fill_value=0)
 pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)</code></pre>
       <p>모델 학습은 논문의 설정을 따른다(<a href="https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf">논문 PDF</a>). FlowCheck는 모델을 실행하지 않고 result.csv의 건수만 센다.</p>
@@ -54,7 +57,7 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
     <p>모델이 각 기기로 분류한 Flow 건수를 0 이상의 정수로 입력하세요. 분류 결과 CSV(<code>predicted</code> 열 필수, 정답 <code>actual</code> 열은 선택)가 있으면 아래에서 바로 집계할 수 있습니다. <code>actual</code>이 있으면 정확도(작업 3)로 확인합니다.</p>
     <div class="csv-box">
       <p class="csv-title">CSV로 채우기 <small>(합성 예시 데이터 — 실제 트래픽·개인정보 없음)</small></p>
-      <p class="note">두 샘플 모두 합성 예시입니다. "제대로 분류된 예시"는 논문의 실제 분류 결과가 아닙니다.</p>
+      <p class="note">두 샘플 모두 합성 예시입니다. "제대로 분류된 예시": 100행, 5종 기기 각 20행, 98행 일치·2행 오분류(SamsungSmartThings→AmazonEcho 1건, TPLinkSmartPlug→SamsungSmartThings 1건)이며 논문의 실제 분류 결과가 아닙니다. 불러오면 정확도와 비교용 점유율이 함께 나옵니다.</p>
       <ul class="samples">
         <li><span>제대로 분류된 예시(100행, actual+predicted)</span><button type="button" class="secondary" data-sample="known">바로 불러오기</button><a href="samples/sample_known_devices.csv" download>다운로드</a></li>
         <li><span>논문 PC 사례(697행)</span><button type="button" class="secondary" data-sample="paper_pc">바로 불러오기</button><a href="samples/sample_paper_pc.csv" download>다운로드</a></li>
@@ -81,7 +84,7 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
 
   <section aria-labelledby="h-acc" class="card">
     <h2 id="h-acc"><span class="num">3</span> 정확도 확인</h2>
-    <p class="acc-how"><svg viewBox="0 0 200 40" role="img" aria-label="맞힌 수 나누기 전체 수는 정확도 퍼센트"><text x="0" y="26" font-size="15" fill="currentColor">맞힌 수 ÷ 전체 = %</text></svg><span>정확도는 어디서 얻나요? 모델 평가 결과의 맞힌 수 ÷ 전체 수 × 100 (논문: 12,584 ÷ 12,816).</span></p>
+    <p class="acc-how"><svg viewBox="0 0 170 34" role="img" aria-label="맞힌 수 나누기 전체 수는 정확도 퍼센트"><text x="0" y="23" font-size="16" font-weight="700" fill="currentColor">맞힌 수 ÷ 전체 = %</text></svg><span>정확도는 어디서 얻나요? 모델 평가 결과의 맞힌 수 ÷ 전체 수 × 100 (논문: 12,584 ÷ 12,816).</span></p>
     <form id="form-acc" novalidate>
       <label for="acc">내 모델의 테스트 정확도(%)</label>
       <div class="row">
@@ -91,7 +94,7 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
     </form>
     <p id="acc-msg" class="msg" role="alert"></p>
     <div id="acc-out" aria-live="polite"></div>
-    <p class="ref">참고: 논문 값 98.19% (12,584 / 12,816)</p>
+    <p class="ref">참고: 논문 값 98.19% (12,584 / 12,816, 논문 §4.1)</p>
   </section>
 
   <section aria-labelledby="h-lim" class="card limits">
@@ -106,7 +109,7 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
 <section aria-labelledby="h-src" class="card sources">
     <h2 id="h-src">출처</h2>
     <ul>
-      <li><b>논문</b>: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 — <a href="https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf">PDF</a> (혼동행렬 표는 PDF에만 있음)</li>
+      <li><b>논문</b>: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 — <a href="https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf">PDF</a> (표 2 성능표와 표 3 혼동행렬은 이 논문에서 가져와 화면에 옮겼습니다)</li>
       <li><b>원자료</b>: UNSW-IoTraffic(UNSW Canberra) — <a href="https://iotanalytics.unsw.edu.au/iottraces.html">iotanalytics.unsw.edu.au</a>. 이 앱에는 포함하지 않았고, 이용 조건은 해당 사이트에서 확인하세요. 인용: Sivanathan et al. (2018), "Classifying IoT Devices in Smart Environments Using Network Traffic Characteristics", IEEE Transactions on Mobile Computing 18(8), 1745–1759.</li>
       <li><b>모델·집계 설정</b>: 논문 본문과 논문 재현 스크립트(Wireshark 캡처, scapy 집계, scikit-learn 랜덤 포레스트).</li>
       <li><b>예시 CSV 2개</b>: FlowCheck를 위해 합성한 것입니다. 논문 PC 사례는 표의 분류 건수(392/186/100/18/1)를 라벨 목록으로 풀어 쓴 것이고, 제대로 분류된 예시(actual+predicted, 98/100 일치)는 논문의 실제 분류 결과가 아닌 임의 합성 예시입니다. UNSW 원자료·실제 트래픽·식별자는 들어 있지 않습니다.</li>

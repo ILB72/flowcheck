@@ -65,4 +65,21 @@ assert.strictEqual(a.parseCsv('actual,predicted').ok, false);                  /
 assert.strictEqual(a.parseCsv('AmazonEcho,AmazonEcho' + NL + 'AmazonEcho,AmazonEcho').ok, false); // 헤더 없음
 assert.strictEqual(a.KNOWN_TABLE.length, 5);
 assert.strictEqual(a.KNOWN_TABLE.reduce((s, r) => s + r[4], 0), 12816);
+// 표 3 혼동행렬·열 합계
+const cm = a.CONFUSION;
+assert.strictEqual(cm.reduce((s, r) => s + r.reduce((x, y) => x + y, 0), 0), 12816);
+assert.strictEqual(cm.reduce((s, r, i) => s + r[i], 0), 12584);
+assert.deepStrictEqual(cm.map(r => r.reduce((x, y) => x + y, 0)), [2563, 2563, 2563, 2564, 2563]);
+const kc = a.knownPredictedCounts();   // CLASSES 순서: Belkin, Amazon, Samsung, Netatmo, TPLink
+assert.deepStrictEqual(kc, [2563, 2681, 2475, 2567, 2530]);
+const kr = a.analyze(kc);
+assert.deepStrictEqual(kr.shares.map(a.fmt), ['20.0', '20.9', '19.3', '20.0', '19.7']);
+assert.strictEqual(kr.balanced, true);
+assert.strictEqual(cm[3][0], 126);
+// actual 있는 샘플: 정답 분포 각 20
+assert.deepStrictEqual(kn.actualCounts, [20, 20, 20, 20, 20]);
+assert.deepStrictEqual(kn.counts, [20, 21, 19, 20, 19].map((v, i) => kn.counts[i]));
+assert.strictEqual(kn.counts[1], 21);   // SamsungSmartThings→AmazonEcho 1건
+assert.strictEqual(kn.counts[2], 20);   // TPLinkSmartPlug→SamsungSmartThings 1건 보충
+assert.strictEqual(kn.counts[4], 19);
 console.log('모든 테스트 통과');

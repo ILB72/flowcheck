@@ -147,3 +147,28 @@ code{background:var(--tint);padding:.05em .35em;border-radius:4px}
 .metrics tr.macro th,.metrics tr.macro td{font-weight:700;border-top:2px solid var(--muted)}
 .bridge{margin:.8rem 0;padding:.6rem .9rem;background:var(--tint);border-left:4px solid var(--accent);border-radius:8px;font-weight:700}
 @media (max-width:560px){.metrics{font-size:.76rem}.metrics th,.metrics td{padding:.25rem .25rem}.metrics caption{font-size:.78rem}}
+
+/* 화면 점검 반영: 작은 상태 알약, 조건 박스, 혼동행렬 */
+.status{gap:.6rem}
+.badge{font-size:.92rem;font-weight:700;padding:.1rem .7rem;border-width:1px;gap:.35rem;line-height:1.6}
+.badge svg{width:16px;height:16px}
+.status p{font-size:.98rem;font-weight:500}
+.banner{font-size:.95rem;font-weight:600;padding:.55rem .8rem;border-left-width:5px}
+.banner svg{width:20px;height:20px;margin-top:3px}
+.cond{margin:.4rem 0 .6rem;padding:.5rem .8rem;border:1px dashed var(--card-line);border-radius:10px;font-size:.88rem;line-height:1.5;color:var(--muted)}
+.cond b{color:var(--fg)}
+.cond ul{margin:.2rem 0 0;padding-left:1.1em}
+.sub-h{margin:.6rem 0 .2rem;font-weight:700;font-size:.95rem}
+.metrics.small{font-size:.84rem}
+.conf{margin:.6rem 0;border:1px solid var(--card-line);border-radius:10px;padding:.4rem .8rem}
+.conf summary{cursor:pointer;font-weight:700;color:var(--accent);min-height:32px}
+.conf-t td.diag{font-weight:700}
+.conf-t td.hot{background:var(--warm-bg);color:var(--warm);font-weight:800;outline:2px solid var(--warm);outline-offset:-2px}
+.conf-t th{white-space:nowrap}
+.code-h{margin:.5rem 0 0;font-weight:700;font-size:.9rem}
+.big-stat b{font-size:1.4rem}
+@media (max-width:560px){.conf-t{font-size:.72rem}.conf-t th,.conf-t td{padding:.25rem .3rem}}
+.conf-t{font-size:.8rem}
+.conf-t th,.conf-t td{padding:.3rem .4rem}
+.conf-t thead th{font-size:.74rem}
+.val.out{background:var(--card);padding:0 4px;border-radius:4px;line-height:20px;top:4px}
