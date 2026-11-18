@@ -131,7 +131,7 @@
     return CLASSES.map(function (n) { return cols[PAPER_ORDER.indexOf(n)]; });
   }
 
-  // 합성 예시: actual,predicted 100행(클래스별 20행), 98행 일치·2행 오분류(논문의 실제 결과가 아님)
+  // 합성 예시: actual,predicted 100행(클래스별 20행), 98행 일치·2행 불일치(논문의 실제 결과가 아님)
   function buildKnownCsv() {
     var rows = [];
     CLASSES.forEach(function (c, i) { for (var k = 0; k < 20; k++) rows.push([c, c]); });
@@ -193,7 +193,7 @@
       row.appendChild(track);
       wrap.appendChild(row);
     });
-    wrap.appendChild(el('p', 'legend', '0% 기준선 / 점선 = 논문 H2 기준 20%, 옅은 띠 = 20%±10%p(앱 내 해석). 점유율 내림차순. 총 ' + res.total.toLocaleString('ko-KR') + ' Flow'));
+    wrap.appendChild(el('p', 'legend', '점선(20%) = 5종에 똑같이 나뉘면 각 20%(논문 가설 2의 기준). 옅은 띠 = 20%±10%p(앱 내 해석). 0% 기준선, 점유율 내림차순. 총 ' + res.total.toLocaleString('ko-KR') + ' Flow'));
     return wrap;
   }
 
@@ -201,17 +201,16 @@
     out.textContent = '';
     var d = (res.diffPP >= 0 ? '+' : '') + fmt(res.diffPP);
     if (res.balanced) {
-      out.appendChild(banner('info', '한쪽 쏠림 없음(논문 H2 기각 조건)'));
-      out.appendChild(el('p', 'note', '다만 알 수 없음 선택지가 없는 모델은 학습에 없던 트래픽을 어느 쪽으로 나누든 제대로 분류한 것이 아닙니다(논문 §5.1).'));
+      out.appendChild(banner('info', '고르게 나뉨 — 다만 등록되지 않은 트래픽이라면 어느 쪽이든 제대로 된 분류가 아닙니다(논문 §5.1).'));
     } else {
-      out.appendChild(banner('warn', '쏠림 경고 — 쏠림 있음(논문 H2 채택 조건과 같은 양상). 논문 기준(각 클래스 20% 내외)에서 벗어났습니다.'));
+      out.appendChild(banner('warn', '한 기기로 몰림 — 등록되지 않은 트래픽을 억지로 분류한 모양(논문 가설 2와 같은 양상)'));
     }
-    out.appendChild(el('p', null, '가장 큰 점유율: ' + CLASSES[res.maxIndex] + ' ' + fmt(res.maxShare) + '% — 논문 기준 20%와의 차이 ' + d + '%p'));
+    out.appendChild(el('p', null, '가장 많이 몰린 기기: ' + CLASSES[res.maxIndex] + ' ' + fmt(res.maxShare) + '% — 논문 기준 20%와의 차이 ' + d + '%p'));
     out.appendChild(renderBars(res));
     if (!res.balanced) {
-      out.appendChild(el('p', 'note', '폐쇄 집합 모델의 강제 배정입니다(논문 §4.2).'));
+      out.appendChild(el('p', 'note', '등록된 5종 안에서만 고르는 모델이라, 모르는 기기도 억지로 하나를 고릅니다(강제 분류, 논문 §4.2).'));
       var ratio = isPaperExample
-        ? '논문 예시에서 BelkinCamera 56.2%는 FPR이 아니라 논문이 정의한 "강제 분류 비율"입니다. 학습에 없던 트래픽이 한 클래스로 몰려 분류된 정도를 뜻합니다.'
+        ? '논문 예시의 BelkinCamera 56.2%는 FPR(오탐률)이 아니라 논문이 정의한 "강제 분류 비율"입니다. 등록되지 않은 트래픽이 한 기기로 몰려 분류된 정도를 뜻합니다.'
         : '가장 큰 클래스로 몰린 비율은 논문의 "강제 분류 비율"과 같은 방식으로 읽을 수 있습니다(FPR이 아님).';
       out.appendChild(el('p', 'note', ratio + ' 원인은 단정할 수 없습니다(아래 한계 참고).'));
     }
@@ -221,7 +220,7 @@
   // 비교용 점유율(정답 열이 있는 파일): 판정 배너 없이 막대와 한 줄 설명만
   function renderCompare(out, res, actualCounts) {
     out.textContent = '';
-    out.appendChild(el('p', 'note', '정답 열이 있는 파일이라 점유율은 비교용으로만 보여 줍니다(쏠림 점검은 학습에 없던 트래픽용).'));
+    out.appendChild(el('p', 'note', '정답 열이 있는 파일(등록된 기기의 트래픽)이라 점유율은 비교용으로만 보여 줍니다. 쏠림 점검은 등록되지 않은 기기용입니다.'));
     out.appendChild(el('p', null, '예측 분포'));
     out.appendChild(renderBars(res));
     var at = actualCounts.reduce(function (x, y) { return x + y; }, 0);
@@ -249,25 +248,25 @@
   }
 
   function renderKnownScene(box) {
-    box.appendChild(el('h3', 'scene-h', 'ⓐ 제대로 분류된 경우 — 5종 기기 내부 테스트'));
+    box.appendChild(el('h3', 'scene-h', 'ⓐ 등록된 기기(5종)의 트래픽 — 잘 맞힘(내부 테스트)'));
     box.appendChild(condBox('테스트 조건 (논문 §3)', [
       'UNSW-IoTraffic 5종 기기 Flow를 클래스당 12,816건으로 언더샘플링(총 64,080건), 80/20 계층 분할(테스트 12,816건, 클래스당 약 2,563건)',
       '랜덤 포레스트(n_estimators=100, random_state=42), 입력은 8개 특징(IP·MAC·타임스탬프 제외)'
     ]));
     var big = el('p', 'big-stat');
     big.appendChild(el('b', null, '정확도 98.19%'));
-    big.appendChild(document.createTextNode(' (12,584 / 12,816) — 논문 §4.1, H1 채택'));
+    big.appendChild(document.createTextNode(' (12,584 / 12,816) — 논문 §4.1, 가설 1(정확도 90% 이상) 채택'));
     box.appendChild(big);
 
     var pred = knownPredictedCounts();
     var res = analyze(pred);
     box.appendChild(el('p', 'sub-h', '예측 분포 (논문 표 3의 열 합계로 계산, 총 12,816건)'));
     box.appendChild(renderBars(res));
-    box.appendChild(el('p', null, '정답은 각 클래스 약 20%(2,563~2,564건) — 예측도 약 20%씩으로 쏠림이 없습니다(논문 표 3 열 합계로 계산).'));
+    box.appendChild(el('p', null, '정답은 각 클래스 약 20%(2,563~2,564건) — 예측도 약 20%씩으로 고르게 나뉩니다(논문 표 3 열 합계로 계산).'));
 
     var wrapT = el('div', 'table-wrap');
     var t = el('table', 'metrics small');
-    t.appendChild(el('caption', null, '클래스별 성능 — 논문 표 2'));
+    t.appendChild(el('caption', null, '기기별 성능 — 논문 표 2 (Precision = 그 기기라고 답한 것 중 실제로 맞은 비율, Recall = 실제 그 기기 중 맞힌 비율, F1 = 둘을 합친 점수, Support = 실제 건수. 1.00이 최고)'));
     var head = el('tr');
     ['기기', 'Precision', 'Recall', 'F1', 'Support'].forEach(function (h) { head.appendChild(el('th', null, h)); });
     var thead = el('thead'); thead.appendChild(head); t.appendChild(thead);
@@ -285,7 +284,7 @@
     m.appendChild(el('td', null, '—'));
     tb.appendChild(m);
     t.appendChild(tb); wrapT.appendChild(t); box.appendChild(wrapT);
-    box.appendChild(el('p', 'note', 'SamsungSmartThings의 Recall(0.94)이 가장 낮고, 126건이 AmazonEcho로 오분류됐습니다(논문 §4.1). 논문 표 2·3에는 이름이 짧게(NetatmoWeather·SmartThings·TPLinkPlug) 적혀 있으며, 이 화면은 전체 이름으로 통일했습니다.'));
+    box.appendChild(el('p', 'note', 'SamsungSmartThings의 Recall(0.94)이 가장 낮고, 126건이 AmazonEcho로 잘못 분류됐습니다(논문 §4.1). 논문 표 2·3에는 이름이 짧게(NetatmoWeather·SmartThings·TPLinkPlug) 적혀 있으며, 이 화면은 전체 이름으로 통일했습니다.'));
 
     var det = el('details', 'conf');
     det.appendChild(el('summary', null, '논문 표 3 혼동행렬 보기 (행=실제, 열=예측)'));
@@ -314,9 +313,9 @@
     var out = document.getElementById('example-out');
     out.textContent = '';
     var a = el('div', 'scene'); renderKnownScene(a); out.appendChild(a);
-    out.appendChild(el('p', 'bridge', '같은 모델이 아는 기기는 98%로 맞히지만, 모르는 트래픽은 억지로 한쪽에 배정합니다(논문 §4.2·§5.1).'));
+    out.appendChild(el('p', 'bridge', '모델은 등록된 기기는 잘 맞히지만, 등록되지 않은 기기도 "모르겠다"고 하지 못하고 등록된 기기 중 하나로 분류해 버립니다(논문 §4.2·§5.1).'));
     var b = el('div', 'scene');
-    b.appendChild(el('h3', 'scene-h', 'ⓑ 학습에 없던 PC 트래픽 697 Flow — 논문 §4.2'));
+    b.appendChild(el('h3', 'scene-h', 'ⓑ 등록되지 않은 기기(PC)의 트래픽 — 등록된 기기로 잘못 분류됨(강제 분류)'));
     b.appendChild(condBox('테스트 조건 (논문 §3)', [
       'Windows PC 유선, 일상 사용(웹 브라우징·동영상 스트리밍·대용량 다운로드) 중 Wireshark로 약 3분 캡처(2026-11-05)',
       'scapy로 TCP/UDP 5-tuple 양방향 Flow 697개로 집계 → 같은 모델에 입력(학습 때의 원-핫 컬럼에 reindex)'
@@ -360,10 +359,10 @@
     badge.appendChild(el('span', null, r.pass ? '통과' : '미달'));
     st.appendChild(badge);
     st.appendChild(el('p', null, r.pass
-      ? r.value + '%는 논문 H1 기준(90% 이상)을 충족합니다.'
-      : r.value + '%는 논문 H1 기준(90% 이상)에 못 미칩니다.'));
+      ? r.value + '%는 논문 가설 1의 기준(정확도 90% 이상)을 충족합니다.'
+      : r.value + '%는 논문 가설 1의 기준(정확도 90% 이상)에 못 미칩니다.'));
     out.appendChild(st);
-    out.appendChild(el('p', 'note', '정확도가 높아도 학습에 없던 트래픽에서는 한쪽으로 쏠릴 수 있습니다. 아래 한계를 함께 읽으세요.'));
+    out.appendChild(el('p', 'note', '정확도가 높아도 등록되지 않은 기기의 트래픽은 한 기기로 몰릴 수 있습니다. 아래 한계를 함께 읽으세요.'));
   });
 
   // ---------- CSV / 샘플 / 가이드 ----------
@@ -378,7 +377,7 @@
       var acc = document.getElementById('acc');
       acc.value = (Math.round(r.accuracy * 100) / 100).toString();
       inputs.forEach(function (inp, i) { inp.value = r.counts[i]; });
-      csvNote.textContent = base + ' 정답 열(actual)이 있어 정확도로 확인했습니다(쏠림 점검은 학습에 없던 트래픽용). 맞힌 ' + n(r.correct) + ' / ' + n(r.rows) + '.' +
+      csvNote.textContent = base + ' 정답 열(actual)이 있어 정확도로 확인했습니다(쏠림 점검은 등록되지 않은 기기용). 정답과 일치한 건수 ' + n(r.correct) + ' / ' + n(r.rows) + '.' +
         (r.actualUnknown ? ' actual의 알 수 없는 클래스 ' + n(r.actualUnknown) + '건(오답으로 계산).' : '') +
         (r.unknown ? ' predicted의 알 수 없는 클래스 ' + n(r.unknown) + '건(오답으로 계산).' : '');
       document.getElementById('counts-msg').textContent = '';
