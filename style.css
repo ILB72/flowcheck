@@ -186,3 +186,6 @@ code{background:var(--tint);padding:.05em .35em;border-radius:4px}
 .conclusion li{margin:.4rem 0}
 .metrics caption{max-width:100%;line-height:1.5;white-space:normal}
 @media (max-width:560px){.metrics.small th:first-child{overflow-wrap:anywhere;max-width:7.5em}.metrics.small{font-size:.74rem}}
+
+.conclusion .fine{margin:.4rem 0 0;font-size:.8rem;color:var(--muted)}
+.conclusion .note{display:none}

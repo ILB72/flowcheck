@@ -45,23 +45,14 @@ assert.deepStrictEqual(a.parseCsv('id,predicted' + NL + '1,TPLinkSmartPlug').cou
 const al = a.parseCsv(['predicted','TPLinkPlug','NetatmoWeather','SmartThings','tplinkplug','TPLinkSmartPlug','Foo'].join(NL));
 assert(al.ok && al.unknown === 1);
 assert.deepStrictEqual(al.counts, [0, 0, 1, 1, 3]);
-// 샘플 2개
-assert.deepStrictEqual(Object.keys(a.SAMPLES), ['known', 'paper_pc']);
+// 샘플 1개(논문 PC 사례)
+assert.deepStrictEqual(Object.keys(a.SAMPLES), ['paper_pc']);
 const pp = a.parseCsv(a.SAMPLES.paper_pc.build());
-assert(pp.ok && !pp.hasActual && pp.unknown === 0 && pp.rows === 697);
+assert(pp.ok && pp.unknown === 0 && pp.rows === 697);
+assert.strictEqual(a.parseCsv('actual,predicted' + NL + 'AmazonEcho,AmazonEcho').ok, true); // 다른 열은 무시, predicted만 사용
 assert.deepStrictEqual(pp.counts, a.EXAMPLE);
-const kn = a.parseCsv(a.SAMPLES.known.build());
-assert(kn.ok && kn.hasActual && kn.rows === 100 && kn.correct === 98 && kn.unknown === 0 && kn.actualUnknown === 0);
-assert.strictEqual(kn.accuracy, 98);
-assert.strictEqual(kn.counts.reduce((x, y) => x + y, 0), 100);
-assert.strictEqual(a.checkAccuracy(String(kn.accuracy)).pass, true);
-// actual 열: 순서 바뀜·별칭·5종 밖
-const sw = a.parseCsv(['predicted,actual', 'TPLinkPlug,TPLinkSmartPlug', 'AmazonEcho,BelkinCamera', 'Foo,AmazonEcho', 'AmazonEcho,Bar'].join(NL));
-assert(sw.ok && sw.hasActual && sw.rows === 4 && sw.correct === 1 && sw.unknown === 1 && sw.actualUnknown === 1 && sw.accuracy === 25);
-const onlyPred = a.parseCsv('predicted' + NL + 'AmazonEcho');
-assert(onlyPred.ok && onlyPred.hasActual === false && onlyPred.accuracy === undefined);
-assert.strictEqual(a.parseCsv('actual' + NL + 'AmazonEcho').ok, false);       // predicted 없음
-assert.strictEqual(a.parseCsv('actual,predicted').ok, false);                  // 데이터 행 없음
+assert.strictEqual(a.parseCsv('actual' + NL + 'AmazonEcho').ok, false);       // predicted 열 없음
+assert.strictEqual(a.parseCsv('predicted').ok, false);                          // 데이터 행 없음
 assert.strictEqual(a.parseCsv('AmazonEcho,AmazonEcho' + NL + 'AmazonEcho,AmazonEcho').ok, false); // 헤더 없음
 assert.strictEqual(a.KNOWN_TABLE.length, 5);
 assert.strictEqual(a.KNOWN_TABLE.reduce((s, r) => s + r[4], 0), 12816);
@@ -76,10 +67,4 @@ const kr = a.analyze(kc);
 assert.deepStrictEqual(kr.shares.map(a.fmt), ['20.0', '20.9', '19.3', '20.0', '19.7']);
 assert.strictEqual(kr.balanced, true);
 assert.strictEqual(cm[3][0], 126);
-// actual 있는 샘플: 정답 분포 각 20
-assert.deepStrictEqual(kn.actualCounts, [20, 20, 20, 20, 20]);
-assert.deepStrictEqual(kn.counts, [20, 21, 19, 20, 19].map((v, i) => kn.counts[i]));
-assert.strictEqual(kn.counts[1], 21);   // SamsungSmartThings→AmazonEcho 1건
-assert.strictEqual(kn.counts[2], 20);   // TPLinkSmartPlug→SamsungSmartThings 1건 보충
-assert.strictEqual(kn.counts[4], 19);
 console.log('모든 테스트 통과');

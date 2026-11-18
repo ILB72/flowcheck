@@ -47,7 +47,6 @@
 
   var MAX_CSV = 5 * 1000 * 1000; // 5MB 초과는 처리하지 않음
   var SAMPLES = {
-    known: { file: 'sample_known_devices.csv', build: function () { return buildKnownCsv(); } },
     paper_pc: { file: 'sample_paper_pc.csv', build: function () { return buildCsv(EXAMPLE); } }
   };
 
@@ -71,40 +70,24 @@
   function parseCsv(text) {
     if (text == null || typeof text !== 'string') return { ok: false, error: '내용이 없습니다.' };
     if (text.length > MAX_CSV) return { ok: false, error: '파일이 너무 큽니다(5MB 이하만 가능).' };
-    var lines = text.replace(/^﻿/, '').split(/\r\n|\n|\r/).filter(function (l) { return l.trim() !== ''; });
-    if (!lines.length) return { ok: false, error: '빈 파일입니다. 첫 줄에 predicted(선택: actual), 그 아래 한 줄에 클래스명 하나씩 넣어 주세요.' };
+    if (text.charCodeAt(0) === 65279) text = text.slice(1);   // BOM 제거
+    var lines = text.split(String.fromCharCode(10)).map(function (l) { return l.trim(); }).filter(function (l) { return l !== ''; });
+    if (!lines.length) return { ok: false, error: '빈 파일입니다. 첫 줄에 predicted, 그 아래 한 줄에 클래스명 하나씩 넣어 주세요.' };
     var clean = function (v) { return v.trim().replace(/^"|"$/g, '').trim(); };
     var header = lines[0].split(',').map(function (v) { return clean(v).toLowerCase(); });
-    var col = header.indexOf('predicted'), acol = header.indexOf('actual');
+    var col = header.indexOf('predicted');
     if (col < 0) return { ok: false, error: '헤더가 없습니다. 첫 줄에 predicted 열이 있어야 합니다.' };
-    var counts = [0, 0, 0, 0, 0], actualCounts = [0, 0, 0, 0, 0], unknown = 0, actualUnknown = 0, correct = 0;
+    var counts = [0, 0, 0, 0, 0], unknown = 0;
     var names = CLASSES.map(function (c) { return c.toLowerCase(); });
     var rows = lines.length - 1;
-    function lookup(raw) {
-      var v = clean(raw || '').toLowerCase();
+    if (rows === 0) return { ok: false, error: '데이터 행이 없습니다. predicted 아래에 클래스명을 넣어 주세요.' };
+    for (var i = 1; i < lines.length; i++) {
+      var v = clean(lines[i].split(',')[col] || '').toLowerCase();
       var k = names.indexOf(v);
       if (k < 0 && ALIASES.hasOwnProperty(v)) k = ALIASES[v];
-      return k;
-    }
-    for (var i = 1; i < lines.length; i++) {
-      var cells = lines[i].split(',');
-      var k = lookup(cells[col]);
       if (k >= 0) counts[k]++; else unknown++;
-      if (acol >= 0) {
-        var ak = lookup(cells[acol]);
-        if (ak < 0) actualUnknown++; else actualCounts[ak]++;
-        if (ak >= 0 && ak === k) correct++;
-      }
     }
-    if (rows === 0) return { ok: false, error: '데이터 행이 없습니다. predicted 아래에 클래스명을 넣어 주세요.' };
-    var out = { ok: true, counts: counts, unknown: unknown, rows: rows, hasActual: acol >= 0 };
-    if (acol >= 0) {
-      out.actualUnknown = actualUnknown;
-      out.actualCounts = actualCounts;
-      out.correct = correct;
-      out.accuracy = correct / rows * 100;
-    }
-    return out;
+    return { ok: true, counts: counts, unknown: unknown, rows: rows };
   }
 
   // 논문 표 2(5종 기기 내부 테스트, §4.1): [Precision, Recall, F1, Support]. 이름은 화면 전체와 같은 전체 이름으로 통일.
@@ -131,22 +114,7 @@
     return CLASSES.map(function (n) { return cols[PAPER_ORDER.indexOf(n)]; });
   }
 
-  // 합성 예시: actual,predicted 100행(클래스별 20행), 98행 일치·2행 불일치(논문의 실제 결과가 아님)
-  function buildKnownCsv() {
-    var rows = [];
-    CLASSES.forEach(function (c, i) { for (var k = 0; k < 20; k++) rows.push([c, c]); });
-    rows[2 * 20][1] = CLASSES[1];   // SamsungSmartThings → AmazonEcho
-    rows[4 * 20][1] = CLASSES[2];   // TPLinkSmartPlug → SamsungSmartThings
-    var seed = 777;
-    for (var j = rows.length - 1; j > 0; j--) {
-      seed = (seed * 1103515245 + 12345) % 2147483648;
-      var r = seed % (j + 1), t = rows[j]; rows[j] = rows[r]; rows[r] = t;
-    }
-    var NL = String.fromCharCode(10);
-    return 'actual,predicted' + NL + rows.map(function (r) { return r[0] + ',' + r[1]; }).join(NL) + NL;
-  }
-
-  var api = { CLASSES: CLASSES, EXAMPLE: EXAMPLE, parseCount: parseCount, analyze: analyze, checkAccuracy: checkAccuracy, fmt: fmt, parseCsv: parseCsv, buildCsv: buildCsv, buildKnownCsv: buildKnownCsv, KNOWN_TABLE: KNOWN_TABLE, CONFUSION: CONFUSION, knownPredictedCounts: knownPredictedCounts, SAMPLES: SAMPLES };
+  var api = { CLASSES: CLASSES, EXAMPLE: EXAMPLE, parseCount: parseCount, analyze: analyze, checkAccuracy: checkAccuracy, fmt: fmt, parseCsv: parseCsv, buildCsv: buildCsv, KNOWN_TABLE: KNOWN_TABLE, CONFUSION: CONFUSION, knownPredictedCounts: knownPredictedCounts, SAMPLES: SAMPLES };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   if (typeof document === 'undefined') return;
 
@@ -208,24 +176,12 @@
     out.appendChild(el('p', null, '가장 많이 몰린 기기: ' + CLASSES[res.maxIndex] + ' ' + fmt(res.maxShare) + '% — 논문 기준 20%와의 차이 ' + d + '%p'));
     out.appendChild(renderBars(res));
     if (!res.balanced) {
-      out.appendChild(el('p', 'note', '등록된 5종 안에서만 고르는 모델이라, 모르는 기기도 억지로 하나를 고릅니다(강제 분류, 논문 §4.2).'));
-      var ratio = isPaperExample
-        ? '논문 예시의 BelkinCamera 56.2%는 FPR(오탐률)이 아니라 논문이 정의한 "강제 분류 비율"입니다. 등록되지 않은 트래픽이 한 기기로 몰려 분류된 정도를 뜻합니다.'
-        : '가장 큰 클래스로 몰린 비율은 논문의 "강제 분류 비율"과 같은 방식으로 읽을 수 있습니다(FPR이 아님).';
-      out.appendChild(el('p', 'note', ratio + ' 원인은 단정할 수 없습니다(아래 한계 참고).'));
-    }
-    out.appendChild(el('p', 'note', '※ "20% 내외"는 논문에 수치 범위가 없어 앱에서 ±10%p로 해석한 값입니다.'));
-  }
-
-  // 비교용 점유율(정답 열이 있는 파일): 판정 배너 없이 막대와 한 줄 설명만
-  function renderCompare(out, res, actualCounts) {
-    out.textContent = '';
-    out.appendChild(el('p', 'note', '정답 열이 있는 파일(등록된 기기의 트래픽)이라 점유율은 비교용으로만 보여 줍니다. 쏠림 점검은 등록되지 않은 기기용입니다.'));
-    out.appendChild(el('p', null, '예측 분포'));
-    out.appendChild(renderBars(res));
-    var at = actualCounts.reduce(function (x, y) { return x + y; }, 0);
-    if (at > 0) {
-      out.appendChild(el('p', 'note', '정답 분포: ' + CLASSES.map(function (c, i) { return c + ' ' + fmt(actualCounts[i] / at * 100) + '%'; }).join(', ')));
+      var why = '등록된 5종 안에서만 고르는 모델이라, 모르는 기기도 억지로 하나를 고릅니다(강제 분류, 논문 §4.2). ' +
+        (isPaperExample ? '56.2%는 FPR이 아니라 논문이 정의한 "강제 분류 비율"입니다.' : '몰린 비율은 논문의 "강제 분류 비율"과 같은 방식으로 읽습니다(FPR이 아님).');
+      out.appendChild(el('p', 'note', why));
+      out.appendChild(el('p', 'note', isPaperExample
+        ? '왜 BelkinCamera로 몰렸는지는 단정할 수 없습니다. 논문은 영상 스트리밍·대용량 전송 같은 트래픽 특성이 비슷해서일 수 있다고 보지만(논문의 추정, 확정 아님), 특징 기여도 분석을 하지 않았습니다(§5.2).'
+        : '왜 몰렸는지는 단정할 수 없습니다(논문 §5.2).'));
     }
   }
 
@@ -324,12 +280,6 @@
     out.appendChild(b);
   });
 
-  document.getElementById('btn-fill').addEventListener('click', function () {
-    inputs.forEach(function (inp, i) { inp.value = EXAMPLE[i]; inp.removeAttribute('aria-invalid'); });
-    document.getElementById('counts-msg').textContent = '';
-    document.getElementById('form-counts').dispatchEvent(new Event('submit', { cancelable: true }));
-  });
-
   document.getElementById('form-counts').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var msg = document.getElementById('counts-msg'), out = document.getElementById('counts-out');
@@ -373,21 +323,6 @@
     if (!r.ok) { csvMsg.textContent = r.error; return; }
     var n = function (x) { return x.toLocaleString('ko-KR'); };
     var base = (label ? label + ': ' : '') + n(r.rows) + '행을 집계했습니다.';
-    if (r.hasActual) {
-      var acc = document.getElementById('acc');
-      acc.value = (Math.round(r.accuracy * 100) / 100).toString();
-      inputs.forEach(function (inp, i) { inp.value = r.counts[i]; });
-      csvNote.textContent = base + ' 정답 열(actual)이 있어 정확도로 확인했습니다(쏠림 점검은 등록되지 않은 기기용). 정답과 일치한 건수 ' + n(r.correct) + ' / ' + n(r.rows) + '.' +
-        (r.actualUnknown ? ' actual의 알 수 없는 클래스 ' + n(r.actualUnknown) + '건(오답으로 계산).' : '') +
-        (r.unknown ? ' predicted의 알 수 없는 클래스 ' + n(r.unknown) + '건(오답으로 계산).' : '');
-      document.getElementById('counts-msg').textContent = '';
-      var cres = analyze(r.counts);
-      if (cres.ok) renderCompare(document.getElementById('counts-out'), cres, r.actualCounts);
-      else document.getElementById('counts-out').textContent = '';
-      document.getElementById('form-acc').dispatchEvent(new Event('submit', { cancelable: true }));
-      document.getElementById('counts-out').scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
     inputs.forEach(function (inp, i) { inp.value = r.counts[i]; });
     csvNote.textContent = base +
       (r.unknown ? ' 알 수 없는 클래스 ' + n(r.unknown) + '건(5종 밖, 점유율 계산에서 제외).' : '');
