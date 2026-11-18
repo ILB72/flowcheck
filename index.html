@@ -43,7 +43,7 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
 
   <section aria-labelledby="h-ex" class="card">
     <h2 id="h-ex"><span class="num">1</span> 예시 불러오기</h2>
-    <p>논문에서 학습에 없던 PC 트래픽 697 Flow를 분류했을 때의 분포입니다.</p>
+    <p>같은 모델의 두 장면을 위에서 아래로 비교합니다: ⓐ 아는 기기(5종 내부 테스트) → ⓑ 학습에 없던 PC 트래픽 697 Flow.</p>
     <button type="button" id="btn-example">논문 예시 불러오기</button>
     <div id="example-out" aria-live="polite"></div>
   </section>
@@ -51,12 +51,12 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
   <section aria-labelledby="h-in" class="card">
     <h2 id="h-in"><span class="num">2</span> 내 결과 입력</h2>
     <p class="scope"><b>쏠림 점검은 학습에 없던(비-IoT) 트래픽을 분류한 결과에 쓰는 도구입니다. 5종 기기 자기 트래픽의 분류에는 정확도(작업 3)를 보세요.</b></p>
-    <p>모델이 각 기기로 분류한 Flow 건수를 0 이상의 정수로 입력하세요. 분류 결과 CSV(<code>predicted</code> 열)가 있으면 아래에서 바로 집계할 수 있습니다.</p>
+    <p>모델이 각 기기로 분류한 Flow 건수를 0 이상의 정수로 입력하세요. 분류 결과 CSV(<code>predicted</code> 열 필수, 정답 <code>actual</code> 열은 선택)가 있으면 아래에서 바로 집계할 수 있습니다. <code>actual</code>이 있으면 정확도(작업 3)로 확인합니다.</p>
     <div class="csv-box">
       <p class="csv-title">CSV로 채우기 <small>(합성 예시 데이터 — 실제 트래픽·개인정보 없음)</small></p>
-      <p class="note">두 샘플 모두 합성 예시이며, "쏠림 없는 예시"는 논문 값이 아닌 임의 예시입니다.</p>
+      <p class="note">두 샘플 모두 합성 예시입니다. "제대로 분류된 예시"는 논문의 실제 분류 결과가 아닙니다.</p>
       <ul class="samples">
-        <li><span>쏠림 없는 예시(100행)</span><button type="button" class="secondary" data-sample="no_skew">바로 불러오기</button><a href="samples/sample_no_skew.csv" download>다운로드</a></li>
+        <li><span>제대로 분류된 예시(100행, actual+predicted)</span><button type="button" class="secondary" data-sample="known">바로 불러오기</button><a href="samples/sample_known_devices.csv" download>다운로드</a></li>
         <li><span>논문 PC 사례(697행)</span><button type="button" class="secondary" data-sample="paper_pc">바로 불러오기</button><a href="samples/sample_paper_pc.csv" download>다운로드</a></li>
       </ul>
       <label for="csv-file">내 CSV 파일 선택</label>
@@ -109,7 +109,7 @@ pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)<
       <li><b>논문</b>: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 — <a href="https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf">PDF</a> (혼동행렬 표는 PDF에만 있음)</li>
       <li><b>원자료</b>: UNSW-IoTraffic(UNSW Canberra) — <a href="https://iotanalytics.unsw.edu.au/iottraces.html">iotanalytics.unsw.edu.au</a>. 이 앱에는 포함하지 않았고, 이용 조건은 해당 사이트에서 확인하세요. 인용: Sivanathan et al. (2018), "Classifying IoT Devices in Smart Environments Using Network Traffic Characteristics", IEEE Transactions on Mobile Computing 18(8), 1745–1759.</li>
       <li><b>모델·집계 설정</b>: 논문 본문과 논문 재현 스크립트(Wireshark 캡처, scapy 집계, scikit-learn 랜덤 포레스트).</li>
-      <li><b>예시 CSV 2개</b>: FlowCheck를 위해 합성한 것입니다. 논문 PC 사례는 표의 분류 건수(392/186/100/18/1)를 라벨 목록으로 풀어 쓴 것이고, 쏠림 없는 예시는 논문 값이 아닌 임의 예시입니다. UNSW 원자료·실제 트래픽·식별자는 들어 있지 않습니다.</li>
+      <li><b>예시 CSV 2개</b>: FlowCheck를 위해 합성한 것입니다. 논문 PC 사례는 표의 분류 건수(392/186/100/18/1)를 라벨 목록으로 풀어 쓴 것이고, 제대로 분류된 예시(actual+predicted, 98/100 일치)는 논문의 실제 분류 결과가 아닌 임의 합성 예시입니다. UNSW 원자료·실제 트래픽·식별자는 들어 있지 않습니다.</li>
       <li><b>그림</b>: 직접 만든 인라인 SVG입니다. 외부 이미지·폰트·CDN은 없습니다.</li>
     </ul>
   </section>

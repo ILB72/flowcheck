@@ -28,14 +28,8 @@ assert.strictEqual(a.checkAccuracy('0').ok, true);
 assert.strictEqual(a.checkAccuracy('100').ok, true);
 // CSV 집계
 const NL = String.fromCharCode(10), CR = String.fromCharCode(13);
-for (const k in a.SAMPLES) {
-  const r = a.parseCsv(a.buildCsv(a.SAMPLES[k].counts));
-  assert(r.ok && r.unknown === 0, k);
-  assert.deepStrictEqual(r.counts, a.SAMPLES[k].counts, k);
-}
 assert.strictEqual(a.parseCsv(a.buildCsv(a.EXAMPLE)).rows, 697);
 assert.strictEqual(a.fmt(a.analyze(a.parseCsv(a.buildCsv(a.EXAMPLE)).counts).shares[0]), '56.2');
-assert.strictEqual(a.analyze(a.parseCsv(a.buildCsv([20,20,20,20,20])).counts).balanced, true);
 const u = a.parseCsv(['predicted','BelkinCamera','Foo','','"AmazonEcho"',' belkincamera '].join(CR + NL));
 assert(u.ok && u.unknown === 1 && u.counts[0] === 2 && u.counts[1] === 1 && u.rows === 4);
 assert.strictEqual(a.parseCsv('').ok, false);
@@ -51,4 +45,24 @@ assert.deepStrictEqual(a.parseCsv('id,predicted' + NL + '1,TPLinkSmartPlug').cou
 const al = a.parseCsv(['predicted','TPLinkPlug','NetatmoWeather','SmartThings','tplinkplug','TPLinkSmartPlug','Foo'].join(NL));
 assert(al.ok && al.unknown === 1);
 assert.deepStrictEqual(al.counts, [0, 0, 1, 1, 3]);
+// 샘플 2개
+assert.deepStrictEqual(Object.keys(a.SAMPLES), ['known', 'paper_pc']);
+const pp = a.parseCsv(a.SAMPLES.paper_pc.build());
+assert(pp.ok && !pp.hasActual && pp.unknown === 0 && pp.rows === 697);
+assert.deepStrictEqual(pp.counts, a.EXAMPLE);
+const kn = a.parseCsv(a.SAMPLES.known.build());
+assert(kn.ok && kn.hasActual && kn.rows === 100 && kn.correct === 98 && kn.unknown === 0 && kn.actualUnknown === 0);
+assert.strictEqual(kn.accuracy, 98);
+assert.strictEqual(kn.counts.reduce((x, y) => x + y, 0), 100);
+assert.strictEqual(a.checkAccuracy(String(kn.accuracy)).pass, true);
+// actual 열: 순서 바뀜·별칭·5종 밖
+const sw = a.parseCsv(['predicted,actual', 'TPLinkPlug,TPLinkSmartPlug', 'AmazonEcho,BelkinCamera', 'Foo,AmazonEcho', 'AmazonEcho,Bar'].join(NL));
+assert(sw.ok && sw.hasActual && sw.rows === 4 && sw.correct === 1 && sw.unknown === 1 && sw.actualUnknown === 1 && sw.accuracy === 25);
+const onlyPred = a.parseCsv('predicted' + NL + 'AmazonEcho');
+assert(onlyPred.ok && onlyPred.hasActual === false && onlyPred.accuracy === undefined);
+assert.strictEqual(a.parseCsv('actual' + NL + 'AmazonEcho').ok, false);       // predicted 없음
+assert.strictEqual(a.parseCsv('actual,predicted').ok, false);                  // 데이터 행 없음
+assert.strictEqual(a.parseCsv('AmazonEcho,AmazonEcho' + NL + 'AmazonEcho,AmazonEcho').ok, false); // 헤더 없음
+assert.strictEqual(a.KNOWN_TABLE.length, 5);
+assert.strictEqual(a.KNOWN_TABLE.reduce((s, r) => s + r[4], 0), 12816);
 console.log('모든 테스트 통과');
