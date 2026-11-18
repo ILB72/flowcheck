@@ -131,3 +131,5 @@ code{background:var(--tint);padding:.05em .35em;border-radius:4px}
 .sources ul{margin:0;padding-left:1.2em;font-size:.92rem}
 .sources li{margin:.4rem 0;line-height:1.55}
 .sources{word-break:break-word}
+.banner.info{background:var(--tint);color:var(--fg);border-color:var(--muted)}
+.scope{background:var(--warm-bg);border-left:4px solid var(--warm);padding:.5rem .8rem;border-radius:8px;font-size:.95rem;margin:0 0 .8rem}
