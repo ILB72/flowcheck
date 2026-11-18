@@ -19,6 +19,28 @@
 </div></header>
 
 <main>
+  <section aria-labelledby="h-guide" class="guide">
+    <h2 id="h-guide" class="sr-only">내 결과를 얻는 방법 4단계</h2>
+    <ol class="steps">
+      <li><svg viewBox="0 0 48 48" role="img" aria-label="모니터와 신호 물결"><rect x="6" y="8" width="36" height="24" rx="3"/><path d="M16 38h16M24 32v6"/><path d="M12 22c3-6 5 6 8 0s5 6 8 0 5 6 8 0"/></svg><b>① 캡처</b><span>Wireshark로 약 3분</span></li>
+      <li><svg viewBox="0 0 48 48" role="img" aria-label="표 모양 집계"><rect x="6" y="8" width="36" height="32" rx="3"/><path d="M6 18h36M6 28h36M20 8v32"/></svg><b>② Flow 집계</b><span>scapy로 8개 특징 집계</span></li>
+      <li><svg viewBox="0 0 48 48" role="img" aria-label="나무 모양 분류 모델"><circle cx="24" cy="9" r="4"/><circle cx="12" cy="26" r="4"/><circle cx="36" cy="26" r="4"/><circle cx="6" cy="42" r="3"/><circle cx="18" cy="42" r="3"/><circle cx="30" cy="42" r="3"/><circle cx="42" cy="42" r="3"/><path d="M21 12 14 23M27 12l7 11M10 29l-3 10M14 29l3 10M34 29l-3 10M38 29l3 10"/></svg><b>③ 분류 실행</b><span>랜덤 포레스트, 5종</span></li>
+      <li><svg viewBox="0 0 48 48" role="img" aria-label="막대 그래프"><path d="M6 8v32h36"/><rect x="12" y="22" width="6" height="14"/><rect x="22" y="12" width="6" height="24"/><rect x="32" y="28" width="6" height="8"/></svg><b>④ 건수 입력</b><span>클래스별 건수를 아래에</span></li>
+    </ol>
+    <details class="code-ex">
+      <summary>결과 파일 만드는 코드 예시</summary>
+      <pre><code>pip install pandas scikit-learn scapy
+
+import pandas as pd
+# model: 학습된 RandomForestClassifier, X: 특징표
+X = X.reindex(columns=train_columns, fill_value=0)
+pd.DataFrame({"predicted": model.predict(X)}).to_csv("result.csv", index=False)</code></pre>
+      <p>모델 학습은 논문의 설정을 따른다(<a href="https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf">논문 PDF</a>). FlowCheck는 모델을 실행하지 않고 result.csv의 건수만 센다.</p>
+    </details>
+    <p class="feat">8개 특징: srcPort, dstPort, ipProto, srcNumPackets, dstNumPackets, srcPayloadSize, dstPayloadSize, flowDuration</p>
+    <p class="try">파일이 없어도 예시로 바로 해 볼 수 있어요. <button type="button" id="btn-try">논문 예시로 바로 해 보기</button></p>
+  </section>
+
   <section aria-labelledby="h-ex" class="card">
     <h2 id="h-ex"><span class="num">1</span> 예시 불러오기</h2>
     <p>논문에서 학습에 없던 PC 트래픽 697 Flow를 분류했을 때의 분포입니다.</p>
@@ -28,7 +50,23 @@
 
   <section aria-labelledby="h-in" class="card">
     <h2 id="h-in"><span class="num">2</span> 내 결과 입력</h2>
-    <p>모델이 각 기기로 분류한 Flow 건수를 0 이상의 정수로 입력하세요.</p>
+    <p>모델이 각 기기로 분류한 Flow 건수를 0 이상의 정수로 입력하세요. 분류 결과 CSV(<code>predicted</code> 열)가 있으면 아래에서 바로 집계할 수 있습니다.</p>
+    <div class="csv-box">
+      <p class="csv-title">CSV로 채우기 <small>(합성 예시 데이터 — 실제 트래픽·개인정보 없음)</small></p>
+      <ul class="samples">
+        <li><span>균등(100행)</span><button type="button" class="secondary" data-sample="balanced">바로 불러오기</button><a href="samples/sample_balanced.csv" download>다운로드</a></li>
+        <li><span>약한 쏠림(100행)</span><button type="button" class="secondary" data-sample="mild">바로 불러오기</button><a href="samples/sample_mild.csv" download>다운로드</a></li>
+        <li><span>논문 PC 사례(697행)</span><button type="button" class="secondary" data-sample="paper_pc">바로 불러오기</button><a href="samples/sample_paper_pc.csv" download>다운로드</a></li>
+      </ul>
+      <label for="csv-file">내 CSV 파일 선택</label>
+      <input type="file" id="csv-file" accept=".csv,text/csv,text/plain">
+      <label for="csv-text">또는 CSV 붙여넣기</label>
+      <textarea id="csv-text" rows="4" placeholder="predicted&#10;BelkinCamera&#10;AmazonEcho"></textarea>
+      <div class="row"><button type="button" id="btn-paste" class="secondary">붙여넣은 내용 집계</button></div>
+      <p id="csv-msg" class="msg" role="alert"></p>
+      <p id="csv-note" class="note" role="status"></p>
+      <p class="note">파일은 이 브라우저 안에서만 처리되며 서버로 전송되지 않습니다.</p>
+    </div>
     <form id="form-counts" novalidate>
       <div class="grid" id="count-fields"></div>
       <div class="row">
@@ -42,6 +80,7 @@
 
   <section aria-labelledby="h-acc" class="card">
     <h2 id="h-acc"><span class="num">3</span> 정확도 확인</h2>
+    <p class="acc-how"><svg viewBox="0 0 200 40" role="img" aria-label="맞힌 수 나누기 전체 수는 정확도 퍼센트"><text x="0" y="26" font-size="15" fill="currentColor">맞힌 수 ÷ 전체 = %</text></svg><span>정확도는 어디서 얻나요? 모델 평가 결과의 맞힌 수 ÷ 전체 수 × 100 (논문: 12,584 ÷ 12,816).</span></p>
     <form id="form-acc" novalidate>
       <label for="acc">내 모델의 테스트 정확도(%)</label>
       <div class="row">
@@ -62,6 +101,16 @@
       <li>특징 기여도 분석이 없어 쏠림의 원인을 단정할 수 없다.</li>
       <li>AmazonEcho, BelkinCamera, TPLinkSmartPlug, NetatmoWeatherStation, SamsungSmartThings 5종 기기에 한정된다.</li>
     </ol>
+  </section>
+<section aria-labelledby="h-src" class="card sources">
+    <h2 id="h-src">출처</h2>
+    <ul>
+      <li><b>논문</b>: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 — <a href="https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf">PDF</a> (혼동행렬 표는 PDF에만 있음)</li>
+      <li><b>원자료</b>: UNSW-IoTraffic(UNSW Canberra) — <a href="https://iotanalytics.unsw.edu.au/iottraces.html">iotanalytics.unsw.edu.au</a>. 이 앱에는 포함하지 않았고, 이용 조건은 해당 사이트에서 확인하세요. 인용: Sivanathan et al. (2018), "Classifying IoT Devices in Smart Environments Using Network Traffic Characteristics", IEEE Transactions on Mobile Computing 18(8), 1745–1759.</li>
+      <li><b>모델·집계 설정</b>: 논문 본문과 논문 재현 스크립트(Wireshark 캡처, scapy 집계, scikit-learn 랜덤 포레스트).</li>
+      <li><b>예시 CSV 3개</b>: FlowCheck를 위해 합성한 것입니다. 논문 PC 사례는 표의 분류 건수(392/186/100/18/1)를 라벨 목록으로 풀어 쓴 것이고, 균등·약한 쏠림은 임의 예시입니다. UNSW 원자료·실제 트래픽·식별자는 들어 있지 않습니다.</li>
+      <li><b>그림</b>: 직접 만든 인라인 SVG입니다. 외부 이미지·폰트·CDN은 없습니다.</li>
+    </ul>
   </section>
 </main>
 <footer><p><a href="https://kms-portfolio-site.vercel.app/#works">← 포트폴리오로 돌아가기</a> · <a href="https://github.com/ILB72/flowcheck">GitHub 저장소</a></p><p>FlowCheck는 모델을 학습·실행하지 않고, 입력한 숫자를 논문 기준과 비교만 합니다. 논문 원자료는 포함하지 않습니다.</p></footer>

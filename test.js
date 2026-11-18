@@ -26,4 +26,29 @@ for (const bad of ['', '-1', '100.5', '101', 'abc', '9 8'])
   assert.strictEqual(a.checkAccuracy(bad).ok, false, 'acc ' + bad);
 assert.strictEqual(a.checkAccuracy('0').ok, true);
 assert.strictEqual(a.checkAccuracy('100').ok, true);
+// CSV 집계
+const NL = String.fromCharCode(10), CR = String.fromCharCode(13);
+for (const k in a.SAMPLES) {
+  const r = a.parseCsv(a.buildCsv(a.SAMPLES[k].counts));
+  assert(r.ok && r.unknown === 0, k);
+  assert.deepStrictEqual(r.counts, a.SAMPLES[k].counts, k);
+}
+assert.strictEqual(a.parseCsv(a.buildCsv(a.EXAMPLE)).rows, 697);
+assert.strictEqual(a.fmt(a.analyze(a.parseCsv(a.buildCsv(a.EXAMPLE)).counts).shares[0]), '56.2');
+assert.strictEqual(a.analyze(a.parseCsv(a.buildCsv([20,20,20,20,20])).counts).balanced, true);
+const u = a.parseCsv(['predicted','BelkinCamera','Foo','','"AmazonEcho"',' belkincamera '].join(CR + NL));
+assert(u.ok && u.unknown === 1 && u.counts[0] === 2 && u.counts[1] === 1 && u.rows === 4);
+assert.strictEqual(a.parseCsv('').ok, false);
+assert.strictEqual(a.parseCsv(NL + NL).ok, false);
+assert.strictEqual(a.parseCsv('BelkinCamera' + NL + 'AmazonEcho').ok, false);   // 헤더 없음
+assert.strictEqual(a.parseCsv('predicted').ok, false);                          // 데이터 없음
+assert.strictEqual(a.parseCsv('x'.repeat(5000001)).ok, false);                  // 5MB 초과
+assert.strictEqual(a.parseCsv(null).ok, false);
+const allUnknown = a.parseCsv('predicted' + NL + 'Foo' + NL + 'Bar');
+assert(allUnknown.ok && allUnknown.unknown === 2 && a.analyze(allUnknown.counts).ok === false);
+assert.deepStrictEqual(a.parseCsv('id,predicted' + NL + '1,TPLinkSmartPlug').counts, [0,0,0,0,1]);
+// 별칭(코드 라벨) 매핑
+const al = a.parseCsv(['predicted','TPLinkPlug','NetatmoWeather','SmartThings','tplinkplug','TPLinkSmartPlug','Foo'].join(NL));
+assert(al.ok && al.unknown === 1);
+assert.deepStrictEqual(al.counts, [0, 0, 1, 1, 3]);
 console.log('모든 테스트 통과');

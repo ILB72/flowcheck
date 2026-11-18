@@ -45,7 +45,52 @@
 
   function fmt(x) { return (Math.round(x * 10) / 10).toFixed(1); }
 
-  var api = { CLASSES: CLASSES, EXAMPLE: EXAMPLE, parseCount: parseCount, analyze: analyze, checkAccuracy: checkAccuracy, fmt: fmt };
+  var MAX_CSV = 5 * 1000 * 1000; // 5MB 초과는 처리하지 않음
+  var SAMPLES = {
+    balanced: { file: 'sample_balanced.csv', counts: [20, 20, 20, 20, 20] },
+    mild: { file: 'sample_mild.csv', counts: [35, 25, 20, 12, 8] },
+    paper_pc: { file: 'sample_paper_pc.csv', counts: EXAMPLE.slice() }
+  };
+
+  // 합성 예시 CSV 생성(고정 시드 셔플, 실제 트래픽 아님)
+  function buildCsv(counts) {
+    var labels = [];
+    counts.forEach(function (c, i) { for (var k = 0; k < c; k++) labels.push(CLASSES[i]); });
+    var seed = 12345;
+    for (var j = labels.length - 1; j > 0; j--) {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      var r = seed % (j + 1), t = labels[j]; labels[j] = labels[r]; labels[r] = t;
+    }
+    var NL = String.fromCharCode(10);
+    return 'predicted' + NL + labels.join(NL) + NL;
+  }
+
+  // 코드 라벨(재현 스크립트 표기) → 논문 표기 클래스 index
+  var ALIASES = { tplinkplug: 4, netatmoweather: 3, smartthings: 2 };
+
+  // CSV(predicted 열) 집계. 알 수 없는 클래스는 무시하지 않고 개수를 센다.
+  function parseCsv(text) {
+    if (text == null || typeof text !== 'string') return { ok: false, error: '내용이 없습니다.' };
+    if (text.length > MAX_CSV) return { ok: false, error: '파일이 너무 큽니다(5MB 이하만 가능).' };
+    var lines = text.replace(/^﻿/, '').split(/\r\n|\n|\r/).filter(function (l) { return l.trim() !== ''; });
+    if (!lines.length) return { ok: false, error: '빈 파일입니다. 첫 줄에 predicted, 그 아래 한 줄에 클래스명 하나씩 넣어 주세요.' };
+    var clean = function (v) { return v.trim().replace(/^"|"$/g, '').trim(); };
+    var header = lines[0].split(',').map(function (v) { return clean(v).toLowerCase(); });
+    var col = header.indexOf('predicted');
+    if (col < 0) return { ok: false, error: '헤더가 없습니다. 첫 줄에 predicted 열이 있어야 합니다.' };
+    var counts = [0, 0, 0, 0, 0], unknown = 0, names = CLASSES.map(function (c) { return c.toLowerCase(); });
+    var rows = lines.length - 1;
+    for (var i = 1; i < lines.length; i++) {
+      var v = clean(lines[i].split(',')[col] || '').toLowerCase();
+      var k = names.indexOf(v);
+      if (k < 0 && ALIASES.hasOwnProperty(v)) k = ALIASES[v];
+      if (k >= 0) counts[k]++; else unknown++;
+    }
+    if (rows === 0) return { ok: false, error: '데이터 행이 없습니다. predicted 아래에 클래스명을 넣어 주세요.' };
+    return { ok: true, counts: counts, unknown: unknown, rows: rows };
+  }
+
+  var api = { CLASSES: CLASSES, EXAMPLE: EXAMPLE, parseCount: parseCount, analyze: analyze, checkAccuracy: checkAccuracy, fmt: fmt, parseCsv: parseCsv, buildCsv: buildCsv, SAMPLES: SAMPLES };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   if (typeof document === 'undefined') return;
 
@@ -165,5 +210,39 @@
       : '미달 — ' + r.value + '%는 논문 H1 기준(90% 이상)에 못 미칩니다.'));
     out.appendChild(st);
     out.appendChild(el('p', 'note', '정확도가 높아도 학습에 없던 트래픽에서는 한쪽으로 쏠릴 수 있습니다. 아래 한계를 함께 읽으세요.'));
+  });
+
+  // ---------- CSV / 샘플 / 가이드 ----------
+  var csvMsg = document.getElementById('csv-msg'), csvNote = document.getElementById('csv-note');
+  function applyCsv(text, label) {
+    csvMsg.textContent = ''; csvNote.textContent = '';
+    var r = parseCsv(text);
+    if (!r.ok) { csvMsg.textContent = r.error; return; }
+    inputs.forEach(function (inp, i) { inp.value = r.counts[i]; });
+    csvNote.textContent = (label ? label + ': ' : '') + r.rows.toLocaleString('ko-KR') + '행을 집계했습니다.' +
+      (r.unknown ? ' 알 수 없는 클래스 ' + r.unknown.toLocaleString('ko-KR') + '건(5종 밖, 점유율 계산에서 제외).' : '');
+    document.getElementById('counts-msg').textContent = '';
+    document.getElementById('form-counts').dispatchEvent(new Event('submit', { cancelable: true }));
+  }
+  function loadSample(key) { applyCsv(buildCsv(SAMPLES[key].counts), SAMPLES[key].file); }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (b) {
+    b.addEventListener('click', function () { loadSample(b.getAttribute('data-sample')); });
+  });
+  document.getElementById('csv-file').addEventListener('change', function (ev) {
+    var f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    if (f.size > MAX_CSV) { csvNote.textContent = ''; csvMsg.textContent = '파일이 너무 큽니다(5MB 이하만 가능).'; return; }
+    var rd = new FileReader();
+    rd.onload = function () { applyCsv(String(rd.result), f.name); };
+    rd.onerror = function () { csvNote.textContent = ''; csvMsg.textContent = '파일을 읽지 못했습니다.'; };
+    rd.readAsText(f);
+  });
+  document.getElementById('btn-paste').addEventListener('click', function () {
+    applyCsv(document.getElementById('csv-text').value, '붙여넣기');
+  });
+  var go = document.getElementById('btn-try');
+  if (go) go.addEventListener('click', function () {
+    loadSample('paper_pc');
+    document.getElementById('h-in').scrollIntoView({ behavior: 'smooth' });
   });
 })(typeof window !== 'undefined' ? window : globalThis);

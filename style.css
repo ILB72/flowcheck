@@ -96,3 +96,38 @@ footer{padding:2rem 16px 3rem;color:var(--muted);font-size:.9rem}
 footer p{margin:0 0 .8rem}
 @media (max-width:560px){.hero{padding:2.2rem 0 1.8rem}.bar-row{grid-template-columns:1fr;gap:4px}.card{padding:1rem}.badge{font-size:1.4rem}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.fill{animation:none}}
+
+/* 시작 가이드·CSV */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.guide{margin:1.2rem 0 0}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.steps li{background:var(--card);border:1px solid var(--card-line);border-radius:14px;padding:.8rem;display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.35;position:relative}
+.steps svg{width:56px;height:56px;color:var(--accent);fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;margin-bottom:.3rem}
+.steps b{font-size:1rem;color:var(--accent)}
+.steps span{font-size:.88rem;color:var(--fg)}
+.feat{margin:.6rem 0 0;font-size:.8rem;color:var(--muted);line-height:1.5;word-break:break-all}
+.try{margin:.6rem 0 0;font-weight:600;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.csv-box{background:var(--tint);border:1px solid var(--line);border-radius:12px;padding:.8rem 1rem;margin:.6rem 0 1rem}
+.csv-title{margin:0 0 .4rem;font-weight:700}
+.csv-title small{font-weight:400;color:var(--muted)}
+.samples{list-style:none;margin:0 0 .8rem;padding:0;display:grid;gap:6px}
+.samples li{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.samples span{flex:1 1 150px;font-size:.95rem}
+.samples button{min-height:38px;padding:.2rem 1rem;font-size:.92rem}
+textarea{font:inherit;font-size:.92rem;width:100%;padding:.5rem .8rem;border:1.5px solid var(--muted);border-radius:10px;background:var(--card);color:var(--fg);margin-bottom:.5rem}
+textarea:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+input[type=file]{padding:.4rem;margin-bottom:.6rem}
+code{background:var(--tint);padding:.05em .35em;border-radius:4px}
+.acc-how{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;font-size:.92rem;color:var(--muted);margin:0 0 .8rem}
+.acc-how svg{width:170px;height:34px;color:var(--accent);flex:none}
+.acc-how span{flex:1 1 220px}
+@media (max-width:560px){.steps{grid-template-columns:1fr 1fr;gap:8px}.steps svg{width:44px;height:44px}.steps li{padding:.6rem .4rem}}
+
+.code-ex{margin:.6rem 0 0;background:var(--card);border:1px solid var(--card-line);border-radius:12px;padding:.5rem .9rem}
+.code-ex summary{cursor:pointer;font-weight:700;color:var(--accent);min-height:32px}
+.code-ex pre{margin:.5rem 0;padding:.6rem .8rem;background:var(--tint);border-radius:8px;overflow-x:auto;font-size:.85rem;line-height:1.5}
+.code-ex pre code{background:none;padding:0}
+.code-ex p{font-size:.88rem;margin:0 0 .4rem}
+.sources ul{margin:0;padding-left:1.2em;font-size:.92rem}
+.sources li{margin:.4rem 0;line-height:1.55}
+.sources{word-break:break-word}

@@ -8,6 +8,22 @@ IoT 기기 분류 결과를 받은 보안 입문자가 클래스별 건수를 �
 
 포트폴리오 사이트와 같은 계열의 디자인이다(포레스트 그린 + 앰버 보조색 토큰, 알약형 버튼·링크, 둥근 카드, 격자 무늬 히어로). 상단 히어로(FlowCheck 로고타입, 논문 제목, 앱 한 문장, 포트폴리오로 돌아가기·GitHub 저장소 링크) 아래에 번호 배지 카드 3개(예시 / 내 결과 / 정확도)와 논문이 밝힌 한계 블록이 이어진다. 기기가 다크 모드이면 자동으로 어두운 톤으로 바뀐다. 쏠림 경고는 색 띠·아이콘·텍스트로, 정확도 판정은 큰 '통과'/'미달' 배지로 표시하며, 막대는 점유율 내림차순에 최다 클래스만 강조색이다. 외부 폰트·CDN은 쓰지 않는다.
 
+## 내 결과를 얻는 방법 (화면 상단 4단계 가이드)
+
+① PC 트래픽 약 3분 캡처 → ② Flow로 묶어 8개 특징 계산(srcPort, dstPort, ipProto, srcNumPackets, dstNumPackets, srcPayloadSize, dstPayloadSize, flowDuration) → ③ 랜덤 포레스트로 5종 기기 분류 → ④ 클래스별 건수를 FlowCheck에 입력. 이 앱은 ①~③을 실행하지 않는다.
+
+## 테스트 자료 (`samples/`)
+
+분류 결과 라벨 CSV(헤더 `predicted`, 한 줄에 클래스명 하나). **합성 예시 데이터**이며 실제 트래픽·개인정보가 없다.
+
+| 파일 | 내용 |
+|---|---|
+| `sample_balanced.csv` | 5개 클래스 20건씩, 100행 → 고르게 분산 |
+| `sample_mild.csv` | 35/25/20/12/8 비율, 100행 → 쏠림 있음(+15.0%p) |
+| `sample_paper_pc.csv` | 논문 PC 사례 697행(BelkinCamera 392 등) → BelkinCamera 56.2%, 쏠림 경고 |
+
+작업 2에서 "바로 불러오기" 버튼, 파일 선택, 붙여넣기로 집계할 수 있다. 5종 밖의 클래스명은 "알 수 없는 클래스 N건"으로 표시하고, 헤더 없음·빈 파일·5MB 초과는 안내 문구를 보여 준다. 파일은 브라우저 안에서만 처리되며 서버로 전송되지 않는다.
+
 ## 논문 결과를 앱에서 쓰는 방법
 
 | 기능 | 사용한 논문 수치 |
@@ -37,3 +53,12 @@ IoT 기기 분류 결과를 받은 보안 입문자가 클래스별 건수를 �
 ```
 node test.js
 ```
+
+## 출처와 이용 조건
+
+- 논문: 트래픽 메타데이터를 활용한 IoT 기기 분류 모델의 성능 평가 및 외부 기기 적용 시 분류 경향 분석 (PDF: https://kms-portfolio-site.vercel.app/assets/논문_김민석_T10.pdf). 혼동행렬 표는 PDF에만 있고 앱에 옮기지 않았다.
+- 원자료: UNSW-IoTraffic(UNSW Canberra), https://iotanalytics.unsw.edu.au/iottraces.html. 앱에 포함하지 않았다. 이용 조건은 해당 사이트에서 확인한다. 인용: Sivanathan et al. (2018), "Classifying IoT Devices in Smart Environments Using Network Traffic Characteristics", IEEE Transactions on Mobile Computing 18(8), 1745–1759.
+- 모델·집계 설정(Wireshark 캡처, scapy Flow 집계, scikit-learn 랜덤 포레스트): 논문 본문과 논문 재현 스크립트.
+- 예시 CSV 3개: FlowCheck를 위해 합성한 것(`samples/README.md` 참고). 실제 트래픽·식별자 없음.
+- 그림: 직접 만든 인라인 SVG. 외부 이미지·폰트·CDN 없음.
+- CSV 집계는 코드 라벨(TPLinkPlug, NetatmoWeather, SmartThings)도 논문 표기로 인식한다.
