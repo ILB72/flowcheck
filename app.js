@@ -108,13 +108,44 @@
     [126, 2, 3, 2415, 18],
     [8, 3, 1, 43, 2508]
   ];
-  // 표 3의 열 합계 = 예측 분포(CLASSES 순서로 변환)
-  function knownPredictedCounts() {
-    var cols = PAPER_ORDER.map(function (n, c) { return CONFUSION.reduce(function (s, row) { return s + row[c]; }, 0); });
-    return CLASSES.map(function (n) { return cols[PAPER_ORDER.indexOf(n)]; });
+  // 표 3(혼동행렬)에서 기기별 맞힌 수·비율·가장 많이 틀린 상대를 읽는다(논문 값만 사용)
+  function deviceStats(i) {
+    var row = CONFUSION[i];
+    var total = row.reduce(function (a, b) { return a + b; }, 0);
+    var correct = row[i];
+    var worst = -1;
+    row.forEach(function (v, j) { if (j !== i && (worst < 0 || v > row[worst])) worst = j; });
+    return { name: PAPER_ORDER[i], total: total, correct: correct, wrong: total - correct, rate: correct / total * 100,
+      worstName: PAPER_ORDER[worst], worstCount: row[worst] };
+  }
+  function lowestDevice() {
+    var low = 0;
+    PAPER_ORDER.forEach(function (n, i) { if (deviceStats(i).rate < deviceStats(low).rate) low = i; });
+    return low;
+  }
+  // 단계 이동: 다음(+1)은 마지막 단계에서 처음으로, 이전(-1)은 첫 단계에서 멈춘다
+  var STEP_TOTAL = 4;
+  function stepMove(cur, dir) {
+    if (dir > 0) return cur >= STEP_TOTAL ? 1 : cur + 1;
+    return cur <= 1 ? 1 : cur - 1;
   }
 
-  var api = { CLASSES: CLASSES, EXAMPLE: EXAMPLE, parseCount: parseCount, analyze: analyze, checkAccuracy: checkAccuracy, fmt: fmt, parseCsv: parseCsv, buildCsv: buildCsv, KNOWN_TABLE: KNOWN_TABLE, CONFUSION: CONFUSION, knownPredictedCounts: knownPredictedCounts, SAMPLES: SAMPLES };
+  // ---- 화면 테마(시스템 → 라이트 → 다크 순환). 저장값이 있으면 시스템 설정보다 우선한다 ----
+  var THEME_KEY = 'flowcheck-theme';
+  function normalizeTheme(v) { return v === 'light' || v === 'dark' ? v : 'system'; }
+  function nextTheme(cur) { cur = normalizeTheme(cur); return cur === 'system' ? 'light' : (cur === 'light' ? 'dark' : 'system'); }
+  function readTheme(storage) {
+    try { return storage ? normalizeTheme(storage.getItem(THEME_KEY)) : 'system'; } catch (e) { return 'system'; }
+  }
+  function saveTheme(storage, theme) {
+    try {
+      if (!storage) return false;
+      if (theme === 'light' || theme === 'dark') storage.setItem(THEME_KEY, theme); else storage.removeItem(THEME_KEY);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  var api = { normalizeTheme: normalizeTheme, nextTheme: nextTheme, readTheme: readTheme, saveTheme: saveTheme, CLASSES: CLASSES, EXAMPLE: EXAMPLE, parseCount: parseCount, analyze: analyze, checkAccuracy: checkAccuracy, fmt: fmt, parseCsv: parseCsv, buildCsv: buildCsv, KNOWN_TABLE: KNOWN_TABLE, CONFUSION: CONFUSION, deviceStats: deviceStats, lowestDevice: lowestDevice, stepMove: stepMove, PAPER_ORDER: PAPER_ORDER, STEP_TOTAL: STEP_TOTAL, SAMPLES: SAMPLES };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   if (typeof document === 'undefined') return;
 
@@ -194,32 +225,70 @@
     return inp;
   });
 
-  function condBox(title, lines) {
-    var box = el('div', 'cond');
-    box.appendChild(el('b', null, title));
-    var ul = el('ul');
-    lines.forEach(function (l) { ul.appendChild(el('li', null, l)); });
-    box.appendChild(ul);
-    return box;
+  var nf = function (x) { return x.toLocaleString('en-US'); };
+
+  // ---------- 작업 1: 등록된 기기 확인 (논문 표 3의 행) ----------
+  var devButtons = [];
+  function renderDevice(i) {
+    var st = deviceStats(i);
+    var out = document.getElementById('dev-out');
+    out.textContent = '';
+    out.appendChild(el('p', 'dev-line', st.name + ': 실제 ' + nf(st.total) + '건 중 ' + nf(st.correct) + '건 맞힘 (' + st.rate.toFixed(2) + '%)'));
+    var bar = el('div', 'acc-bar');
+    bar.setAttribute('role', 'img');
+    bar.setAttribute('aria-label', '맞힘 ' + nf(st.correct) + '건, 틀림 ' + nf(st.wrong) + '건');
+    var okSeg = el('div', 'seg-ok'); okSeg.style.width = st.rate + '%';
+    var badSeg = el('div', 'seg-bad');
+    bar.appendChild(okSeg); bar.appendChild(badSeg);
+    out.appendChild(bar);
+    var lg = el('p', 'acc-legend');
+    lg.appendChild(el('span', 'sw sw-ok'));
+    lg.appendChild(document.createTextNode('맞힘 ' + nf(st.correct) + '건   '));
+    lg.appendChild(el('span', 'sw sw-bad'));
+    lg.appendChild(document.createTextNode('틀림 ' + nf(st.wrong) + '건'));
+    out.appendChild(lg);
+    out.appendChild(el('p', null, '가장 많이 틀린 상대: ' + st.worstName + ' ' + nf(st.worstCount) + '건'));
+    out.appendChild(el('p', 'note', '논문 표 3에서 이 기기의 행(실제)을 읽은 값입니다.' +
+      (st.name === 'SamsungSmartThings' ? ' SamsungSmartThings → AmazonEcho 126건은 논문 §4.1의 설명과 같습니다.' : '')));
   }
+  function selectDevice(i, focus) {
+    devButtons.forEach(function (b, j) {
+      b.setAttribute('aria-checked', j === i ? 'true' : 'false');
+      b.tabIndex = j === i ? 0 : -1;
+    });
+    if (focus) devButtons[i].focus();
+    renderDevice(i);
+  }
+  (function initDevices() {
+    var group = document.getElementById('dev-group');
+    PAPER_ORDER.forEach(function (name, i) {
+      var b = el('button', 'seg-btn', name);
+      b.type = 'button'; b.setAttribute('role', 'radio');
+      b.addEventListener('click', function () { selectDevice(i, false); });
+      b.addEventListener('keydown', function (ev) {
+        var k = ev.key, d = 0;
+        if (k === 'ArrowRight' || k === 'ArrowDown') d = 1; else if (k === 'ArrowLeft' || k === 'ArrowUp') d = -1; else return;
+        ev.preventDefault();
+        selectDevice((i + d + PAPER_ORDER.length) % PAPER_ORDER.length, true);
+      });
+      devButtons.push(b); group.appendChild(b);
+    });
+    var low = lowestDevice();
+    var sum = document.getElementById('dev-sum');
+    PAPER_ORDER.forEach(function (name, i) {
+      var st = deviceStats(i);
+      var li = el('li', i === low ? 'is-low' : null);
+      li.appendChild(el('span', 'sum-n', name));
+      li.appendChild(el('span', 'sum-v', st.rate.toFixed(2) + '%'));
+      if (i === low) li.appendChild(el('span', 'sum-tag', '가장 낮음'));
+      sum.appendChild(li);
+    });
+    selectDevice(0, false);
+  })();
 
-  function renderKnownScene(box) {
-    box.appendChild(el('h3', 'scene-h', 'ⓐ 등록된 기기(5종)의 트래픽 — 잘 맞힘(내부 테스트)'));
-    box.appendChild(condBox('테스트 조건 (논문 §3)', [
-      'UNSW-IoTraffic 5종 기기 Flow를 클래스당 12,816건으로 언더샘플링(총 64,080건), 80/20 계층 분할(테스트 12,816건, 클래스당 약 2,563건)',
-      '랜덤 포레스트(n_estimators=100, random_state=42), 입력은 8개 특징(IP·MAC·타임스탬프 제외)'
-    ]));
-    var big = el('p', 'big-stat');
-    big.appendChild(el('b', null, '정확도 98.19%'));
-    big.appendChild(document.createTextNode(' (12,584 / 12,816) — 논문 §4.1, 가설 1(정확도 90% 이상) 채택'));
-    box.appendChild(big);
-
-    var pred = knownPredictedCounts();
-    var res = analyze(pred);
-    box.appendChild(el('p', 'sub-h', '예측 분포 (논문 표 3의 열 합계로 계산, 총 12,816건)'));
-    box.appendChild(renderBars(res));
-    box.appendChild(el('p', null, '정답은 각 클래스 약 20%(2,563~2,564건) — 예측도 약 20%씩으로 고르게 나뉩니다(논문 표 3 열 합계로 계산).'));
-
+  // 논문 표 2·3 전체(접이식 안)
+  (function renderPaperTables() {
+    var box = document.getElementById('paper-tables-body');
     var wrapT = el('div', 'table-wrap');
     var t = el('table', 'metrics small');
     t.appendChild(el('caption', null, '기기별 성능 — 논문 표 2 (Precision = 그 기기라고 답한 것 중 실제로 맞은 비율, Recall = 실제 그 기기 중 맞힌 비율, F1 = 둘을 합친 점수, Support = 실제 건수. 1.00이 최고)'));
@@ -231,7 +300,7 @@
       var tr = el('tr');
       tr.appendChild(el('th', null, r[0]));
       [1, 2, 3].forEach(function (i) { tr.appendChild(el('td', r[0] === 'SamsungSmartThings' && i === 2 ? 'low' : null, r[i].toFixed(2))); });
-      tr.appendChild(el('td', null, r[4].toLocaleString('en-US')));
+      tr.appendChild(el('td', null, nf(r[4])));
       tb.appendChild(tr);
     });
     var m = el('tr', 'macro');
@@ -241,11 +310,9 @@
     tb.appendChild(m);
     t.appendChild(tb); wrapT.appendChild(t); box.appendChild(wrapT);
     box.appendChild(el('p', 'note', 'SamsungSmartThings의 Recall(0.94)이 가장 낮고, 126건이 AmazonEcho로 잘못 분류됐습니다(논문 §4.1). 논문 표 2·3에는 이름이 짧게(NetatmoWeather·SmartThings·TPLinkPlug) 적혀 있으며, 이 화면은 전체 이름으로 통일했습니다.'));
-
-    var det = el('details', 'conf');
-    det.appendChild(el('summary', null, '논문 표 3 혼동행렬 보기 (행=실제, 열=예측)'));
     var w2 = el('div', 'table-wrap');
     var ct = el('table', 'metrics conf-t');
+    ct.appendChild(el('caption', null, '혼동행렬 — 논문 표 3 (행=실제, 열=예측)'));
     var h2 = el('tr');
     h2.appendChild(el('th', null, '실제↓ 예측→'));
     PAPER_ORDER.forEach(function (n) { h2.appendChild(el('th', null, n)); });
@@ -254,31 +321,60 @@
     CONFUSION.forEach(function (row, r) {
       var tr = el('tr');
       tr.appendChild(el('th', null, PAPER_ORDER[r]));
-      row.forEach(function (v, c) {
-        var cls = r === c ? 'diag' : (v === 126 ? 'hot' : '');
-        tr.appendChild(el('td', cls, v.toLocaleString('en-US')));
-      });
+      row.forEach(function (v, c) { tr.appendChild(el('td', r === c ? 'diag' : (v === 126 ? 'hot' : ''), nf(v))); });
       tb2.appendChild(tr);
     });
-    ct.appendChild(tb2); w2.appendChild(ct); det.appendChild(w2);
-    det.appendChild(el('p', 'note', '대각선(진한 글씨)이 맞힌 건수이며 합계 12,584건. 강조 칸: SamsungSmartThings → AmazonEcho 126건.'));
-    box.appendChild(det);
-  }
+    ct.appendChild(tb2); w2.appendChild(ct); box.appendChild(w2);
+    box.appendChild(el('p', 'note', '대각선(진한 글씨)이 맞힌 건수이며 합계 12,584건. 강조 칸: SamsungSmartThings → AmazonEcho 126건.'));
+  })();
 
-  document.getElementById('btn-example').addEventListener('click', function () {
-    var out = document.getElementById('example-out');
-    out.textContent = '';
-    var a = el('div', 'scene'); renderKnownScene(a); out.appendChild(a);
-    out.appendChild(el('p', 'bridge', '모델은 등록된 기기는 잘 맞히지만, 등록되지 않은 기기도 "모르겠다"고 하지 못하고 등록된 기기 중 하나로 분류해 버립니다(논문 §4.2·§5.1).'));
-    var b = el('div', 'scene');
-    b.appendChild(el('h3', 'scene-h', 'ⓑ 등록되지 않은 기기(PC)의 트래픽 — 등록된 기기로 잘못 분류됨(강제 분류)'));
-    b.appendChild(condBox('테스트 조건 (논문 §3)', [
-      'Windows PC 유선, 일상 사용(웹 브라우징·동영상 스트리밍·대용량 다운로드) 중 Wireshark로 약 3분 캡처(2026-11-05)',
-      'scapy로 TCP/UDP 5-tuple 양방향 Flow 697개로 집계 → 같은 모델에 입력(학습 때의 원-핫 컬럼에 reindex)'
-    ]));
-    var body = el('div'); renderResult(body, analyze(EXAMPLE), true); b.appendChild(body);
-    out.appendChild(b);
+  // ---------- 작업 2: 등록되지 않은 기기(PC) 따라가기 ----------
+  var stepCur = 1;
+  function stepContent(n) {
+    var box = el('div');
+    var res = analyze(EXAMPLE);
+    if (n === 1) {
+      box.appendChild(el('h3', 'scene-h', '① 등록된 5종'));
+      box.appendChild(el('p', null, '이 모델이 학습한 기기는 아래 5종뿐입니다. "모른다"는 선택지는 없습니다(논문 §5.1).'));
+      var ul = el('ul', 'chips');
+      PAPER_ORDER.forEach(function (name) { ul.appendChild(el('li', null, name)); });
+      box.appendChild(ul);
+    } else if (n === 2) {
+      box.appendChild(el('h3', 'scene-h', '② 등록되지 않은 PC의 트래픽 697 Flow를 넣음'));
+      var cl = el('ul', 'cond-list');
+      cl.appendChild(el('li', null, 'Windows PC 유선, 일상 사용(웹 브라우징·동영상 스트리밍·대용량 다운로드) 중 Wireshark로 약 3분 캡처'));
+      cl.appendChild(el('li', null, 'scapy로 TCP/UDP 5-tuple 양방향 Flow 697개로 집계 → 같은 모델에 입력 (논문 §3.4)'));
+      box.appendChild(cl);
+      box.appendChild(el('p', 'note', '이 PC는 모델이 학습하지 않은(등록되지 않은) 기기입니다.'));
+    } else if (n === 3) {
+      box.appendChild(el('h3', 'scene-h', '③ 결과: 392건이 BelkinCamera로 분류됨'));
+      box.appendChild(el('p', null, '697건 모두 5종 중 하나로 분류됐고, 392건(56.2%)이 BelkinCamera였습니다.'));
+      box.appendChild(renderBars(res));
+      box.appendChild(el('p', 'note', '56.2%는 FPR(오탐률)이 아니라 논문이 정의한 "강제 분류 비율"입니다(논문 §4.2).'));
+    } else {
+      box.appendChild(el('h3', 'scene-h', '④ 20% 기준선과 비교'));
+      box.appendChild(el('p', null, '5종에 똑같이 나뉘면 각 20%입니다. BelkinCamera는 56.2%로 20%보다 +' + fmt(res.diffPP) + '%p 높습니다.'));
+      var tmp = el('div'); renderResult(tmp, res, true);
+      var bars = tmp.querySelector('.bars'); if (bars) bars.parentNode.removeChild(bars);
+      Array.prototype.slice.call(tmp.querySelectorAll('p')).forEach(function (p) { if (p.textContent.indexOf('가장 많이 몰린 기기') === 0) p.parentNode.removeChild(p); });
+      while (tmp.firstChild) box.appendChild(tmp.firstChild);
+    }
+    return box;
+  }
+  function renderStep() {
+    var body = document.getElementById('step-body');
+    body.textContent = '';
+    body.appendChild(stepContent(stepCur));
+    document.getElementById('step-status').textContent = '단계 ' + stepCur + ' / ' + STEP_TOTAL;
+    document.getElementById('step-prev').disabled = stepCur === 1;
+    document.getElementById('step-next').textContent = stepCur === STEP_TOTAL ? '처음부터' : '다음';
+  }
+  document.getElementById('step-next').addEventListener('click', function () { stepCur = stepMove(stepCur, 1); renderStep(); });
+  document.getElementById('step-prev').addEventListener('click', function () {
+    stepCur = stepMove(stepCur, -1); renderStep();
+    if (stepCur === 1) document.getElementById('step-next').focus();   // 비활성화된 버튼에 포커스가 남지 않게
   });
+  renderStep();
 
   document.getElementById('form-counts').addEventListener('submit', function (ev) {
     ev.preventDefault();
@@ -345,9 +441,28 @@
   document.getElementById('btn-paste').addEventListener('click', function () {
     applyCsv(document.getElementById('csv-text').value, '붙여넣기');
   });
-  var go = document.getElementById('btn-try');
-  if (go) go.addEventListener('click', function () {
-    loadSample('paper_pc');
-    document.getElementById('h-in').scrollIntoView({ behavior: 'smooth' });
-  });
+
+  // ---------- 테마 전환 버튼 ----------
+  (function initTheme() {
+    var btn = document.getElementById('theme-btn');
+    if (!btn) return;
+    var store = null;
+    try { store = root.localStorage; } catch (e) { store = null; }
+    var cur = readTheme(store);
+    var SVG = {
+      light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+      dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+      system: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>'
+    };
+    var LABEL = { system: '시스템', light: '라이트', dark: '다크' };
+    function apply() {
+      var de = document.documentElement;
+      if (cur === 'system') de.removeAttribute('data-theme'); else de.setAttribute('data-theme', cur);
+      btn.innerHTML = SVG[cur];   // 고정 문자열만 사용
+      btn.appendChild(document.createTextNode('테마: ' + LABEL[cur]));
+      btn.setAttribute('aria-label', '화면 테마: 현재 ' + LABEL[cur] + (cur === 'system' ? '(기기 설정을 따름)' : '') + '. 누르면 ' + LABEL[nextTheme(cur)] + '(으)로 바뀝니다.');
+    }
+    btn.addEventListener('click', function () { cur = nextTheme(cur); saveTheme(store, cur); apply(); });
+    apply();
+  })();
 })(typeof window !== 'undefined' ? window : globalThis);

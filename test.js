@@ -61,10 +61,41 @@ const cm = a.CONFUSION;
 assert.strictEqual(cm.reduce((s, r) => s + r.reduce((x, y) => x + y, 0), 0), 12816);
 assert.strictEqual(cm.reduce((s, r, i) => s + r[i], 0), 12584);
 assert.deepStrictEqual(cm.map(r => r.reduce((x, y) => x + y, 0)), [2563, 2563, 2563, 2564, 2563]);
-const kc = a.knownPredictedCounts();   // CLASSES 순서: Belkin, Amazon, Samsung, Netatmo, TPLink
-assert.deepStrictEqual(kc, [2563, 2681, 2475, 2567, 2530]);
-const kr = a.analyze(kc);
-assert.deepStrictEqual(kr.shares.map(a.fmt), ['20.0', '20.9', '19.3', '20.0', '19.7']);
-assert.strictEqual(kr.balanced, true);
 assert.strictEqual(cm[3][0], 126);
+// 작업 1: 기기별 맞힌 수·비율(표 3 대각선/행합계)
+const st = [0, 1, 2, 3, 4].map(i => a.deviceStats(i));
+assert.deepStrictEqual(st.map(s => s.correct), [2545, 2554, 2562, 2415, 2508]);
+assert.deepStrictEqual(st.map(s => s.total), [2563, 2563, 2563, 2564, 2563]);
+assert.strictEqual(st.reduce((x, s) => x + s.correct, 0), 12584);
+assert.deepStrictEqual(st.map(s => s.rate.toFixed(2)), ['99.30', '99.65', '99.96', '94.19', '97.85']);
+assert.strictEqual(st[3].worstName, 'AmazonEcho');
+assert.strictEqual(st[3].worstCount, 126);                       // 논문 §4.1: 126건이 AmazonEcho로
+assert.deepStrictEqual([st[0].worstName, st[0].worstCount], ['SamsungSmartThings', 11]);
+assert.strictEqual(a.lowestDevice(), 3);                          // SamsungSmartThings가 가장 낮음
+// 작업 2: 단계 이동
+assert.strictEqual(a.STEP_TOTAL, 4);
+assert.strictEqual(a.stepMove(1, 1), 2);
+assert.strictEqual(a.stepMove(4, 1), 1);                          // 마지막에서 '처음부터'
+assert.strictEqual(a.stepMove(1, -1), 1);                         // 첫 단계에서 이전은 멈춤
+assert.strictEqual(a.stepMove(3, -1), 2);
+// 삭제한 재학습 값·실제 트래픽 예시가 코드에 남지 않았는지
+const fs = require('fs');
+const src = ['app.js', 'index.html', 'README.md', 'samples/README.md'].map(f => fs.readFileSync(f, 'utf-8')).join(String.fromCharCode(10));
+assert(!/98[.]18|FLOWCHECK_EXAMPLE|example_data|sample_registered|make_example/.test(src));
+assert.deepStrictEqual(fs.readdirSync('samples').sort(), ['README.md', 'sample_paper_pc.csv']);
+// 테마 로직: 저장값 > 시스템, 잘못된 값 무시, 저장소 예외 처리
+const mem = (v) => ({ v, getItem() { return this.v; }, setItem(k, x) { this.v = x; }, removeItem() { this.v = null; } });
+assert.strictEqual(a.readTheme(mem('dark')), 'dark');
+assert.strictEqual(a.readTheme(mem('light')), 'light');
+assert.strictEqual(a.readTheme(mem('blue')), 'system');
+assert.strictEqual(a.readTheme(mem(null)), 'system');
+assert.strictEqual(a.readTheme(null), 'system');
+assert.strictEqual(a.readTheme({ getItem() { throw new Error('blocked'); } }), 'system');
+assert.deepStrictEqual(['system', 'light', 'dark', 'system'].map(a.nextTheme), ['light', 'dark', 'system', 'light']);
+assert.strictEqual(a.nextTheme('???'), 'light');
+const m2 = mem(null);
+assert.strictEqual(a.saveTheme(m2, 'dark'), true); assert.strictEqual(m2.v, 'dark');
+assert.strictEqual(a.saveTheme(m2, 'system'), true); assert.strictEqual(m2.v, null);
+assert.strictEqual(a.saveTheme({ setItem() { throw new Error('quota'); }, removeItem() { throw new Error('quota'); } }, 'light'), false);
+assert.strictEqual(a.saveTheme(null, 'light'), false);
 console.log('모든 테스트 통과');

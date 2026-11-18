@@ -7,14 +7,24 @@
   --grad-a:#E4EFE7;--grad-b:#F7F9F6;--grid:rgba(47,107,79,.07);
   --font:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif;
 }
+/* 테마: data-theme이 없으면(시스템) OS 설정을 따르고, light/dark는 사용자가 고른 값이 우선한다.
+   다크 토큰은 CSS 변수만으로 두 곳(자동·수동)에 같은 값을 둔다. */
+:root[data-theme="light"]{color-scheme:light}
 @media (prefers-color-scheme:dark){
-  :root{
+  :root:not([data-theme]){
     --bg:#111A15;--card:#17231D;--fg:#E6EFE9;--muted:#A3B5AA;
     --accent:#7CC39A;--link:#8ED6AE;--on-accent:#111A15;
     --line:#2C4036;--card-line:#3A5245;--tint:#1C2B23;--track:#26382E;
     --warm:#E0B15A;--warm-bg:#2A2414;--bad:#F4877B;--bad-bg:#2E1A18;
-    --grad-a:#17281F;--grad-b:#111A15;--grid:rgba(124,195,154,.08);
+    --grad-a:#17281F;--grad-b:#111A15;--grid:rgba(124,195,154,.08);color-scheme:dark;
   }
+}
+:root[data-theme="dark"]{
+    --bg:#111A15;--card:#17231D;--fg:#E6EFE9;--muted:#A3B5AA;
+    --accent:#7CC39A;--link:#8ED6AE;--on-accent:#111A15;
+    --line:#2C4036;--card-line:#3A5245;--tint:#1C2B23;--track:#26382E;
+    --warm:#E0B15A;--warm-bg:#2A2414;--bad:#F4877B;--bad-bg:#2E1A18;
+    --grad-a:#17281F;--grad-b:#111A15;--grid:rgba(124,195,154,.08);color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -189,3 +199,73 @@ code{background:var(--tint);padding:.05em .35em;border-radius:4px}
 
 .conclusion .fine{margin:.4rem 0 0;font-size:.8rem;color:var(--muted)}
 .conclusion .note{display:none}
+
+/* 실제 트래픽 예시 표 */
+.real{margin:.8rem 0;padding:.6rem .8rem;border:1px solid var(--card-line);border-radius:12px}
+.real-h{margin:.2rem 0;font-size:1rem;color:var(--accent)}
+.real-t td,.real-t th{white-space:nowrap}
+.real-t tr.wrong td,.real-t tr.wrong th{background:var(--warm-bg)}
+.real-t td.okc{color:var(--link);font-weight:700}
+.real-t td.badc{color:var(--bad);font-weight:800}
+.real-act{margin:.5rem 0 0;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.real-act button{min-height:38px;padding:.2rem 1rem;font-size:.92rem}
+.real-t{font-size:.78rem}
+.real-t th,.real-t td{padding:.25rem .4rem}
+.real-t thead th{white-space:normal;overflow-wrap:anywhere;vertical-align:bottom}
+.real-t td.pred{text-align:left}
+.real-t .okc{color:var(--link);font-weight:700}
+.real-t .badc{color:var(--bad);font-weight:800}
+.real-t thead th{white-space:nowrap;overflow-wrap:normal;font-size:.68rem;padding:.25rem .3rem}
+.real-t td{padding:.25rem .3rem}
+@media (max-width:560px){.real-t th:first-child,.metrics.small.real-t th:first-child{max-width:none;overflow-wrap:normal;white-space:nowrap}}
+.samples small{display:block;color:var(--muted);font-size:.8rem;line-height:1.4;font-weight:400}
+.real-t td.pred{line-height:1.25}
+.real-t td.pred .okc,.real-t td.pred .badc{font-size:.7rem}
+.real-t th,.real-t td{padding:.22rem .3rem}
+.real{padding:.6rem .5rem}
+.real-t{font-size:.76rem}
+.real-t th,.real-t td{padding:.22rem .25rem}
+
+/* ---- 개편: 작업 1(기기 선택) · 작업 2(단계) · 선택 영역 ---- */
+.overall{margin:.2rem 0 .6rem;font-size:1.05rem}
+.overall b{font-size:1.5rem;font-variant-numeric:tabular-nums}
+.seg{display:flex;flex-wrap:wrap;gap:.5rem;margin:.4rem 0 .8rem}
+.seg-btn{background:var(--card);color:var(--accent);padding:.35rem .9rem;font-size:.92rem}
+.seg-btn[aria-checked="true"]{background:var(--accent);color:var(--on-accent)}
+.seg-btn[aria-checked="true"]::before{content:"✓ "}
+@media (max-width:560px){.seg{display:grid;grid-template-columns:1fr 1fr}.seg-btn{padding:.35rem .4rem;font-size:.82rem;overflow-wrap:anywhere}}
+.dev-line{margin:.2rem 0 .4rem;font-weight:700;font-size:1.05rem}
+.acc-bar{display:flex;height:24px;border:1px solid var(--fg);border-radius:6px;overflow:hidden;background:var(--card)}
+.seg-ok{background:var(--accent);height:100%}
+.seg-bad{flex:1;min-width:6px;height:100%;background:repeating-linear-gradient(45deg,var(--warm) 0 3px,var(--warm-bg) 3px 6px)}
+.acc-legend{margin:.3rem 0 .6rem;font-size:.88rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.sw{display:inline-block;width:14px;height:14px;border:1px solid var(--fg);border-radius:3px;vertical-align:middle}
+.sw-ok{background:var(--accent)}
+.sw-bad{background:repeating-linear-gradient(45deg,var(--warm) 0 3px,var(--warm-bg) 3px 6px)}
+.sum{list-style:none;margin:.6rem 0;padding:.5rem .8rem;background:var(--tint);border-radius:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.2rem .8rem;font-size:.88rem}
+.sum li{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+.sum-v{font-weight:700;font-variant-numeric:tabular-nums}
+.sum-tag{font-size:.75rem;font-weight:700;color:var(--warm);border:1px solid var(--warm);border-radius:999px;padding:0 .5rem}
+.core{border-left:6px solid var(--accent)}
+.core-badge{font-size:.75rem;font-weight:700;color:var(--on-accent);background:var(--accent);border-radius:999px;padding:.05rem .6rem}
+.step-body{min-height:9rem;padding:.2rem 0}
+.step-ctl{display:flex;gap:.8rem;align-items:center;margin-top:.6rem;flex-wrap:wrap}
+.step-ctl button:disabled{opacity:.45;cursor:default}
+.step-status{font-weight:700;font-variant-numeric:tabular-nums}
+.chips{list-style:none;margin:.4rem 0;padding:0;display:flex;gap:.4rem;flex-wrap:wrap}
+.chips li{border:1px solid var(--accent);color:var(--accent);background:var(--card);border-radius:999px;padding:.1rem .8rem;font-weight:700;font-size:.9rem}
+.cond-list{margin:.3rem 0;padding-left:1.2em;font-size:.95rem}
+.optional{padding:0}
+.optional>summary{cursor:pointer;font-weight:800;font-size:1.15rem;padding:1rem 1.4rem;color:var(--accent);min-height:44px}
+.optional[open]>summary{border-bottom:1px solid var(--line)}
+.optional>:not(summary){margin-left:1.4rem;margin-right:1.4rem}
+.optional>:last-child{margin-bottom:1.2rem}
+.opt-intro{margin-top:.8rem;color:var(--muted);font-size:.92rem}
+@media (max-width:560px){.optional>summary{padding:.8rem 1rem}.optional>:not(summary){margin-left:1rem;margin-right:1rem}}
+.explain h2{font-size:1.15rem}
+@media (max-width:560px){.seg-btn{font-size:.7rem;padding:.3rem .15rem;overflow-wrap:normal;word-break:keep-all;white-space:nowrap}.seg-btn[aria-checked="true"]::before{content:"✓"}}
+
+/* 테마 전환 버튼 */
+.theme-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem 1rem;min-height:36px;border:1px solid var(--accent);border-radius:999px;background:var(--card);color:var(--accent);font-size:.95rem;font-weight:600;line-height:1.6;cursor:pointer}
+.theme-btn:hover{background:var(--accent);color:var(--on-accent);filter:none}
+.theme-btn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
